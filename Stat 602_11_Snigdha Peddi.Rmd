@@ -1,0 +1,1066 @@
+---
+title: "Homework 11"
+author: "Snigdha Peddi"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=F,warning=F,echo=F,fig_height=10,fig_width=7,cache = F)
+```
+
+```{r libraries}
+#install.packages("ISLR")
+library(ISLR)
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("knitr")
+library(knitr)
+#install.packages("tidyr")
+library(tidyr)
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("GGally")
+library(GGally)
+#install.packages("MASS")
+library(MASS)
+#install.packages("purrr")
+library(purrr)
+#install.packages("mclust")
+library(mclust)
+#install.packages('class')
+library(class)
+#install.packages('blorr')
+library(blorr)
+#install.packages('caTools')
+library("caTools")
+#install.packages('caret')
+library("caret")
+#install.packages('Boot')
+library("boot")
+#install.packages('glmnet')
+library('glmnet')
+#install.packages('splines2')
+library('splines2')
+#install.packages("NHANES")
+library('NHANES')
+#install.packages("tidyverse")
+library("tidyverse")
+#install.packages("mltools")
+library("mltools")
+#install.packages("data.table")
+library("data.table")
+#install.packages("mlbench")
+library("mlbench")
+#install.packages("randomForest")
+library("randomForest")
+#install.packages("neuralnet")
+library("neuralnet")
+#install.packages("nnet")
+library("nnet")
+#install.packages('htmltools')
+library('htmltools')
+#install.packages('klaR')
+library('klaR')
+#install.packages('NeuralNetTools')
+library('NeuralNetTools')
+
+```
+
+## Exercises (MDSR)
+
+```{r Code Chunk-1}
+# Misclassification Functions
+
+misclass.fun <- function(predicted,actual,threshold=0.5){
+  predictied.values<- ifelse(predicted >= threshold,1,0)
+  
+  TP <- sum(ifelse(actual == 1 & predictied.values == 1,1,0))
+  TN <- sum(ifelse(actual == 0 & predictied.values == 0,1,0))
+  FP <- sum(ifelse(actual == 0 & predictied.values == 1,1,0))
+  FN <- sum(ifelse(actual == 1 & predictied.values == 0,1,0))
+  
+  misclassfication.rate <- ((FP+FN)/(TP+TN+FP+FN))
+  sensitivity <- TP/(TP+FN)
+  specificity <- TN/(TN+FP)
+  
+  Info.Table<- c('Misclassification Rate'=misclassfication.rate,                  'Sensitivity'=sensitivity,
+                 'Specificity'=specificity)
+  return(Info.Table)
+}
+
+
+misclass.fun.sp<- function(predicted,actual){
+
+  
+  TP <- sum(ifelse(actual == 1 & predicted == 1,1,0))
+  TN <- sum(ifelse(actual == 0 & predicted == 0,1,0))
+  FP <- sum(ifelse(actual == 0 & predicted == 1,1,0))
+  FN <- sum(ifelse(actual == 1 & predicted == 0,1,0))
+  
+  misclassfication.rate <- ((FP+FN)/(TP+TN+FP+FN))
+  sensitivity <- TP/(TP+FN)
+  specificity <- TN/(TN+FP)
+  
+  Info.Table<- c('Misclassification Rate'=misclassfication.rate,                  'Sensitivity'=sensitivity,
+                 'Specificity'=specificity)
+  return(Info.Table)
+  
+  accuracy <- function(x){accuracy<- sum(diag(x)/(sum(rowSums(x))))
+ misclassfication <- 1-(sum(diag(x)/(sum(rowSums(x)))))
+  sensitivity <- x[2,2]/(x[2,2]+x[1,2])
+  specificity <- x[1,1]/(x[1,1]+x[2,1])
+  
+  Info.Table<- c('Misclassification Rate'=misclassfication,                  'Sensitivity'=sensitivity,'Specificity'=specificity)
+  return(Info.Table)}
+ }
+```
+
+
+### Use set.seed(202111) when appropriate to make results reproducible.
+
+*1.(Modified from 8.1 pg 201 in **Modern Data Science with R**.) The ability to get a good night's sleep is correlated with many positive health outcomes. The `NHANES` data set contains a binary variable `SleepTrouble` that indicates whether each person has trouble sleeping. For each of the listed models -  Logistic Regression, Neural network, K - Nearest Neighbors, LDA, and QDA, repeat all of the following steps:*
+
+a) Using the Validation Set Approach with a split of 90/10, build a classifier for `SleepTrouble` on the training data. You will have to use a subset of the variables.
+    
+b) Report its effectiveness on the test data.
+    
+c) Make an appropriate visualization of the model.
+    
+d) Interpret the results. What have you learned about people's sleeping habits?
+
+### Answer:
+
+  NHANES data set is read and preprocessed for duplicate records,features that were obviously correlated were removed like Age in years and Age in Months etc, the features that have missing values for more than 70% records were removed, missing values for categorical variables were imputed, one Hot encoding of categorical variables was performed.
+  Then the data is split in 90/10 ratio for training and testing data. After the split the data is imputed for missing values in numerical variables. The values were then standardized so that all the variables are between 0 and 1.Finally, Random Forest classifier is used to select the top most important variable that will be further used to fit models using classifier like KNN, Logistic Regression, LDA, QDA and Neural Networks.
+  
+#### Duplicate Records:
+
+```{r Code Chunk-2}
+# Reading the Data
+data(NHANES)
+# Renaming the data
+nhanes<-NHANES
+cat("Dimensions of NHANES Datatset:\n",dim(nhanes))
+# Removing the duplicates
+nhanes<-unique(nhanes)
+#Reading the top 50 records of the data
+#head(nhanes,50)
+cat("\n\nDimensions of NHANES Datatset after removing the duplicate records:\n",dim(nhanes))
+#cat("\n\nSummary of NHANES Dataset:\n")
+#summary(nhanes)
+#dim(nhanes)
+```
+
+#### Feature Selection:
+
+- SurveyYr and ID were removed as target variable does not depend on these variables
+- Age in Decade and Age in months variable are removed as they are related to Age variable
+- Race 3 variable removed is as it is related to Race1 variable and values are reported for years 2009-2010,
+- HHIncome is removed as HHincomeMid can be used which reports the median value in each HHIncome category
+- Length and Headcirc removed as it is reported for infants only
+- BMICatUnder20yrs is removed as information belongs only to individuals of ages below 20
+- BMI_WHO removed as similar to BMI but categorized
+- Removed BPSys1,BPDia1,BPSys2,BPDia2,BPSys3,BPDia3 as combined systolic and diastolic blood pressure is available
+- Testosterone, TVHrsDay and CompHrsDay is removed as data is not available for years 2009-2010
+- UrineVol2, UrineFlow2, DiabetesAge, Age1stBaby, TVHrsDayChild, CompHrsDayChild, PregnantNow, AgeRegMarij are removed as they have about 80% missing values
+- npregnancies and nBabies are removed as they are reported only for females over age 20 and have about 74% and 75% missing values,
+- Weight and Height removed as BMI gives similar information 
+- Removed variables DaysPhysHlthBad,DaysMentHlthBad,LittleInterest,Depressed as HealthGen provides similar information
+- removed Alcohol12PlusYr as it is similar to AlcoholYear
+- removed SmokeNow as NA values include participants who smoked less than 100 times including missing values and smoke1000 gives better picture of the effect of smoking
+- Marijuana and AgeFirstMarij removed as variables RegularMarij give more relavent information
+- Removed SexAge, SexNumPartnLife, SexNumPartYear,SameSex,SexOrientation as these variables are not very relevant to explain response variable
+- Removed Smoke100n as it is same as Smoke100
+- Removed SmokeAge as it has about 70% missing values
+- SleepHrsNight is removed as it is same as sleeptrouble 
+
+
+```{r Code Chunk-3}
+#summary(nhanes$SleepTrouble)
+#Removing the variables
+nhanes1<-subset(nhanes,select=-c(SurveyYr,ID,AgeDecade,AgeMonths,Race3,HHIncome,Length,HeadCirc,BMICatUnder20yrs,BMI_WHO,BPSys1,BPDia1,BPSys2,BPDia2,BPSys3,BPDia3,Testosterone,UrineVol2,UrineFlow2,DiabetesAge,nPregnancies,Age1stBaby,nBabies,TVHrsDayChild,CompHrsDayChild,PregnantNow,Weight,Height,DaysMentHlthBad,LittleInterest,Depressed,DaysPhysHlthBad,TVHrsDay,CompHrsDay,Alcohol12PlusYr,SmokeNow,Marijuana,AgeFirstMarij,AgeRegMarij,SexAge,SexNumPartnLife,SexOrientation,SexNumPartYear,SameSex,Smoke100n,SmokeAge,SleepHrsNight ))
+
+cat("\n\nDimensions of NHANES Datatset after initial Feature Selection:\n",dim(nhanes1))
+#str(nhanes1)
+```
+
+```{r Code Chunk-4}
+# Rearraged the columns such that target variable is at the end
+nhanes1<- nhanes1[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,22,23,24,25,26,27,28,29,21)]
+#str(nhanes1)
+#summary(nhanes1)
+```
+
+#### Missing Value Imputation of Categorical Variables
+
+  After analyzing the variables the missing values are categorized into missing values (for instance, if value is missing for Homeown variable then the values are imputed as missing category) and Not Applicable (For instance, HealthGEn is reported for ages 12 and above, the missing values are imputed as Not Applicable) depending on the information provided on individual categorical variables in the NHANES data.
+  
+```{r Code CHunk-5}
+#saving the levels of Education variable in new vector
+levels<-levels(nhanes1$Education)
+# Adding a new factor level in Education variable
+levels[length(levels)+1]<-"age<20/Missing"
+# Refactoring Education variable
+nhanes1$Education<-factor(nhanes1$Education,levels=levels)
+# Replacing NA with age less than 20 or missing values
+nhanes1$Education[is.na(nhanes1$Education)]<-"age<20/Missing"
+#levels(nhanes1$Education)
+```
+
+```{r Code Chunk-6}
+#saving the levels of MaritalStatus variable in new vector
+levels1<-levels(nhanes1$MaritalStatus)
+# Adding a new factor level in MaritalStatus variable
+levels1[length(levels1)+1]<-"Not Applicable"
+# Refactoring MaritalStatus variable
+nhanes1$MaritalStatus<-factor(nhanes1$MaritalStatus,levels=levels1)
+# Replacing NA with "Not Applicable as age below 20 reported NA
+nhanes1$MaritalStatus[is.na(nhanes1$MaritalStatus)]<-"Not Applicable"
+#levels(nhanes1$MaritalStatus)
+```
+
+```{r Code Chunk-7}
+#saving the levels of Smoke100 variable in new vector
+levels2<-levels(nhanes1$Smoke100)
+# Adding a new factor level in Smoke100 variable
+levels2[length(levels1)+1]<-"Not Applicable"
+# Refactoring Smoke100 variable
+nhanes1$Smoke100<-factor(nhanes1$Smoke100,levels=levels2)
+# Replacing NA with "Not Applicable as age below 20 reported NA
+nhanes1$Smoke100[is.na(nhanes1$Smoke100)]<-"Not Applicable"
+#levels(nhanes1$Smoke100)
+```
+```{r Code Chunk-8}
+#saving the levels of HomeOwn variable in new vector
+levels3<-levels(nhanes1$HomeOwn)
+# Adding a new factor level in HomeOwn variable
+levels3[length(levels)+1]<-"Missing"
+# Refactoring HomeOwn variable
+nhanes1$HomeOwn<-factor(nhanes1$HomeOwn,levels=levels3)
+# Replacing NA with missing 
+nhanes1$HomeOwn[is.na(nhanes1$HomeOwn)]<-"Missing"
+#levels(nhanes1$HomeOwn)
+```
+```{r Code Chunk-9}
+#saving the levels of Work variable in new vector
+levels4<-levels(nhanes1$Work)
+# Adding a new factor level in Work variable
+levels4[length(levels1)+1]<-"Not Applicable"
+# Refactoring Work variable
+nhanes1$Work<-factor(nhanes1$Work,levels=levels4)
+# Replacing NA with "Not Applicable 
+nhanes1$Work[is.na(nhanes1$Work)]<-"Not Applicable"
+#levels(nhanes1$Work)
+```
+```{r Code Chunk-10}
+#saving the levels of Diabetes variable in new vector
+levels5<-levels(nhanes1$Diabetes)
+# Adding a new factor level in Diabetes variable
+levels5[length(levels)+1]<-"Missing"
+# Refactoring Diabetes variable
+nhanes1$Diabetes<-factor(nhanes1$Diabetes,levels=levels5)
+# Replacing NA with missing 
+nhanes1$Diabetes[is.na(nhanes1$Diabetes)]<-"Missing"
+#levels(nhanes1$Diabetes)
+```
+```{r Code Chunk-11}
+#saving the levels of HealthGen variable in new vector
+levels6<-levels(nhanes1$HealthGen)
+# Adding a new factor level in HealthGen variable
+levels6[length(levels1)+1]<-"Not Applicable"
+# Refactoring HealthGen variable
+nhanes1$HealthGen<-factor(nhanes1$HealthGen,levels=levels6)
+# Replacing NA with "Not Applicable 
+nhanes1$HealthGen[is.na(nhanes1$HealthGen)]<-"Not Applicable"
+#levels(nhanes1$HealthGen)
+```
+
+```{r Code Chunk-12}
+#saving the levels of PhysActive variable in new vector
+levels7<-levels(nhanes1$PhysActive)
+# Adding a new factor level in PhysActive variable
+levels7[length(levels1)+1]<-"Not Applicable"
+# Refactoring PhysActive variable
+nhanes1$PhysActive<-factor(nhanes1$PhysActive,levels=levels7)
+# Replacing NA with "Not Applicable 
+nhanes1$PhysActive[is.na(nhanes1$PhysActive)]<-"Not Applicable"
+#levels(nhanes1$PhysActive)
+```
+```{r Code Chunk-13}
+#saving the levels of Smoke100 variable in new vector
+levels8<-levels(nhanes1$Smoke100)
+# Adding a new factor level in Smoke100 variable
+levels8[length(levels1)+1]<-"Not Applicable"
+# Refactoring Smoke100 variable
+nhanes1$Smoke100<-factor(nhanes1$Smoke100,levels=levels7)
+# Replacing NA with "Not Applicable 
+nhanes1$Smoke100[is.na(nhanes1$Smoke100)]<-"Not Applicable"
+#levels(nhanes1$Smoke100)
+```
+```{r Code CHunk-14}
+#saving the levels of RegularMarij variable in new vector
+levels9<-levels(nhanes1$RegularMarij )
+# Adding a new factor level in RegularMarij variable
+levels9[length(levels)+1]<-"Missing"
+# Refactoring RegularMarij variable
+nhanes1$RegularMarij<-factor(nhanes1$RegularMarij,levels=levels9)
+# Replacing NA with missing 
+nhanes1$RegularMarij[is.na(nhanes1$RegularMarij)]<-"Missing"
+#levels(nhanes1$RegularMarij)
+```
+```{r Code Chunk-15}
+#saving the levels of HardDrugs variable in new vector
+levels10<-levels(nhanes1$HardDrugs)
+# Adding a new factor level in HardDrugs variable
+levels10[length(levels)+1]<-"Missing"
+# Refactoring HardDrugs variable
+nhanes1$HardDrugs<-factor(nhanes1$HardDrugs,levels=levels10)
+# Replacing NA with missing 
+nhanes1$HardDrugs[is.na(nhanes1$HardDrugs)]<-"Missing"
+#levels(nhanes1$HardDrugs)
+```
+```{r Code Chunk-16}
+#saving the levels of SexEver variable in new vector
+levels11<-levels(nhanes1$SexEver)
+# Adding a new factor level in SexEver variable
+levels11[length(levels)+1]<-"Missing"
+# Refactoring SexEver variable
+nhanes1$SexEver<-factor(nhanes1$SexEver,levels=levels11)
+# Replacing NA with missing 
+nhanes1$SexEver[is.na(nhanes1$SexEver)]<-"Missing"
+#levels(nhanes1$SexEver)
+```
+```{r Code Chunk-17}
+# Removing all the records with NA as target value
+nhanes1<-nhanes1[!is.na(nhanes1$SleepTrouble),]
+```
+
+```{r Code Chunk-18}
+# verifying if there are any null values in factor variables
+cat("\nNumber of Missing values in categorical variables including Target Variable :")
+sum(is.na(nhanes1$SleepTrouble),is.na(nhanes1$Gender),is.na(nhanes1$Race1),is.na(nhanes1$Education),is.na(nhanes1$MaritalStatus),is.na(nhanes1$HomeOwn),is.na(nhanes1$Work),is.na(nhanes1$Diabetes),is.na(nhanes1$HealthGen),is.na(nhanes1$PhysActive),is.na(nhanes1$Smoke100),is.na(nhanes1$RegularMarij),is.na(nhanes1$HardDrugs),is.na(nhanes1$SexEver))
+
+```
+
+```{r Code Chunk-19}
+# Reporting dimension of dataset
+cat("\nDimensions of NHANES Datatset after missing value imputation for Categorical variables:\n",dim(nhanes1))
+
+```
+
+#### One Hot Encoding:
+
+   Categorical variables except the target variable were now converted to numerical variables by one hot encoding method.
+   
+```{r Code Chunk-20}
+#one hot encoding of categorical variables
+nhanes2<-one_hot(as.data.table(nhanes1[,-29]))
+nhanes2<-cbind(nhanes2,SleepTrouble=nhanes1$SleepTrouble)
+```
+
+```{r Code Chunk-21}
+cat("\nDimensions of NHANES Datatset after One Hot Encoding of Categorical variables:\n",dim(nhanes2))
+#colnames(nhanes2)
+```
+
+#### 90/10 Split (Validation Approach):
+
+  The resultant data is split into a ratio of 90:10 (training:test respectively).  As the number of records in each class are not proportional measures were taken to make sure 90/10 split resulted in equal proportion of classes. 
+  
+```{r Code Chunk-22}
+set.seed(202111)
+#separating data based on sleeptrouble
+datasleepyes<-nhanes2 %>% filter(nhanes2$SleepTrouble=="Yes")
+#dim(datasleepyes)
+datasleepno<-nhanes2 %>% filter(nhanes2$SleepTrouble=="No")
+#dim(datasleepno)
+#dim(nhanes2)
+```
+
+```{r Code Chunk-23}
+set.seed(202111)
+# Data was seprated based on categories of target variable, SleepTrouble. Then both the datasets are split, 90/10 and then the train and test sets are combined such that the data of both categories are split proportionally.
+split<-sample.split(datasleepyes$SleepTrouble,SplitRatio = 0.9)
+trainyes<-subset(datasleepyes,split==TRUE)
+testyes<-subset(datasleepyes,split==FALSE)
+#dim(trainyes)
+#dim(testyes)
+
+split1<-sample.split(datasleepno$SleepTrouble,SplitRatio = 0.9)
+trainno<-subset(datasleepno,split1==TRUE)
+testno<-subset(datasleepno,split1==FALSE)
+#dim(trainno)
+#dim(testno)
+
+train.dat<-rbind(trainyes,trainno)
+test.dat<-rbind(testyes,testno)
+cat("\nDimensions of NHANES Train Datatset:\n",dim(train.dat))
+cat("\nDimensions of NHANES Test Datatset:\n",dim(test.dat))
+```
+
+#### Missing Value Imputation of Numerical  Variables:
+
+  Missing values are replaced by mean value of the variable for most of the predictors except HHIncomeMid and Poverty. Median values were used for predictors HHIncomeMid and Poverty as more sample population is below mean value and replacing with higher value would affect prediction.
+
+```{r Code Chunk-24}
+#No missing values in Age
+#summary(train.dat$Age)
+#sum(is.na(train.dat$Age))
+#Missing values in HHIncomeMid
+#summary(train.dat$HHIncomeMid)
+train.dat$HHIncomeMid[is.na(train.dat$HHIncomeMid)]<-median(train.dat$HHIncomeMid,na.rm=TRUE)
+#sum(is.na(train.dat$HHIncomeMid))
+#Missing values in Poverty
+#summary(train.dat$Poverty)
+train.dat$Poverty[is.na(train.dat$Poverty)]<-median(train.dat$Poverty,na.rm=TRUE)
+#sum(is.na(train.dat$Poverty))
+#Missing values in HomeRooms
+#summary(train.dat$HomeRooms)
+train.dat$HomeRooms[is.na(train.dat$HomeRooms)]<-mean(train.dat$HomeRooms,na.rm=TRUE)
+#sum(is.na(train.dat$HomeRooms))
+#Missing values in BMI
+#summary(train.dat$BMI)
+train.dat$BMI[is.na(train.dat$BMI)]<-mean(train.dat$BMI,na.rm=TRUE)
+#sum(is.na(train.dat$BMI))
+#Missing values in Pulse
+#summary(train.dat$Pulse)
+train.dat$Pulse[is.na(train.dat$Pulse)]<-mean(train.dat$Pulse,na.rm=TRUE)
+#sum(is.na(train.dat$Pulse))
+#Missing values in BPSysAve
+#summary(train.dat$BPSysAve)
+train.dat$BPSysAve[is.na(train.dat$BPSysAve)]<-mean(train.dat$BPSysAve,na.rm=TRUE)
+#sum(is.na(train.dat$BPSysAve))
+#Missing values in BPDiaAve
+#summary(train.dat$BPDiaAve)
+train.dat$BPDiaAve[is.na(train.dat$BPDiaAve)]<-mean(train.dat$BPDiaAve,na.rm=TRUE)
+#sum(is.na(train.dat$BPDiaAve))
+#Missing values in DirectChol
+train.dat$DirectChol[is.na(train.dat$DirectChol)]<-mean(train.dat$DirectChol,na.rm=TRUE)
+#summary(train.dat$DirectChol)
+#sum(is.na(train.dat$DirectChol))
+#Missing values in TotChol
+#summary(train.dat$TotChol)
+train.dat$TotChol[is.na(train.dat$TotChol)]<-mean(train.dat$TotChol,na.rm=TRUE)
+#sum(is.na(train.dat$TotChol))
+#Missing values in UrineVol1
+#summary(train.dat$UrineVol1)
+train.dat$UrineVol1[is.na(train.dat$UrineVol1)]<-mean(train.dat$UrineVol1,na.rm=TRUE)
+#sum(is.na(train.dat$UrineVol1))
+#Missing values in UrineFlow1
+#summary(train.dat$UrineFlow1)
+train.dat$UrineFlow1[is.na(train.dat$UrineFlow1)]<-mean(train.dat$UrineFlow1,na.rm=TRUE)
+#sum(is.na(train.dat$UrineFlow1))
+
+#Missing values in PhysActiveDays
+#summary(train.dat$PhysActiveDays)
+train.dat$PhysActiveDays[is.na(train.dat$PhysActiveDays)]<-mean(train.dat$PhysActiveDays,na.rm=TRUE)
+#sum(is.na(train.dat$PhysActiveDays))
+#Missing values in AlcoholDay
+#summary(train.dat$AlcoholDay)
+train.dat$AlcoholDay[is.na(train.dat$AlcoholDay)]<-mean(train.dat$AlcoholDay,na.rm=TRUE)
+#sum(is.na(train.dat$AlcoholDay))
+#Missing values in AlcoholYear
+#summary(train.dat$AlcoholYear)
+train.dat$AlcoholYear[is.na(train.dat$AlcoholYear)]<-mean(train.dat$AlcoholYear,na.rm=TRUE)
+#sum(is.na(train.dat$AlcoholYear))
+
+```
+```{r Code Chunk-25}
+#replacing NA values in numeric variables
+cat("\nNumber of Missing values in Numerical variables after imputation:")
+sum(is.na(train.dat$Age),is.na(train.dat$HHIncomeMid),is.na(train.dat$Poverty),is.na(train.dat$HomeRooms),is.na(train.dat$BMI),is.na(train.dat$Pulse),is.na(train.dat$BPSysAve),is.na(train.dat$BPDiaAve),is.na(train.dat$DirectChol),is.na(train.dat$TotChol),is.na(train.dat$UrineVol1),is.na(train.dat$UrineFlow1),is.na(train.dat$PhysActiveDays),is.na(train.dat$AlcoholDay),is.na(train.dat$AlcoholYear))
+```
+
+```{r Code Chunk-26}
+#head(train.dat)
+train.dat<-train.dat %>% rename(Education_8th_Grade='Education_8th Grade',
+     Education_High_School="Education_High School",
+     Education_Some_College="Education_Some College",
+     Education_College_Grad="Education_College Grad",
+     Smoke100_Not_Applicable="Smoke100_Not Applicable")
+```
+```{r Code Chunk-27}
+train.dat<-train.dat %>% rename(
+     "Education_9_11th_Grade"="Education_9 - 11th Grade",
+     )
+```
+
+```{r Code Chunk-28}
+train.dat<-train.dat %>% rename(
+     "Education_age_LT_20"="Education_age<20/Missing",
+     )
+```
+```{r Code Chunk-29}
+train.dat<-train.dat %>% rename(
+     "MaritalStatus_Not_Applicable"="MaritalStatus_Not Applicable",
+     )
+```
+
+```{r Code Chunk-30}
+train.dat<-train.dat %>% rename(
+     "Work_Not_Applicable"="Work_Not Applicable",
+     )
+```
+
+```{r Code Chunk-31}
+train.dat<-train.dat %>% rename(
+     "HealthGen_Not_Applicable"="HealthGen_Not Applicable",
+     )
+```
+```{r Code Chunk-32}
+train.dat<-train.dat %>% rename(
+     "PhysActive_Not_Applicable"="PhysActive_Not Applicable",
+     )
+```
+
+#### Variable Importance
+
+   Random Forest classifier is used to compute the variable importance using Gini Index.
+   
+```{r Code Chunk-33}
+#head(train.dat)
+
+fit_rf = randomForest(SleepTrouble~., data=train.dat)
+# Create an importance based on mean decreasing gini
+imp<-importance(fit_rf)
+imp<-data.frame(round(imp,3))
+imp<- imp%>% arrange(desc(MeanDecreaseGini))
+```
+```{r Code Chunk-34}
+kable(data.frame("Gini_Index"=imp),digits=3,caption='*Variable Importance by Random Forest*')
+```
+
+```{r Code Chunk-35}
+train_var<-data.frame(BMI=train.dat$BMI,Age=train.dat$Age,TotChol=train.dat$TotChol,UrineFlow1=train.dat$UrineFlow1,UrineVol1=train.dat$UrineVol1,
+                 BPSysAve=train.dat$BPSysAve,
+              DirectChol=train.dat$DirectChol,BPDiaAve=train.dat$BPDiaAve,
+              Pulse=train.dat$Pulse,
+              Poverty=train.dat$Poverty,AlcoholYear=train.dat$AlcoholYear,
+          HomeRooms=train.dat$HomeRooms,HHIncomeMid=train.dat$HHIncomeMid,
+                 SleepTrouble=train.dat$SleepTrouble)
+```
+
+#### Standardization of Features:
+
+  Scale() function is used to normalize or standardize the values in the dataset to numbers between 0 and 1. By using center and scale parameters as True in the scale function the variables are scaled as per Z-score formula. Mean value of each variable is subtracted from each value and is then divided by Standard deviation of the feature resulting in a value between 0 and 1. This helps improving the accuracy when models like SVM,KNN,logistic regression,Neural network are fit for predictions.
+  
+```{r Code Chunk-36}
+#I have used scale function to standardize the train data.By using center and scale paramets as True the variables are scaled as per Z-score formula. Each value substracts the mean value and is divede by sd of the column.
+#It is better to standardize the data for SVM,KNN,logistic regression,Neural network
+train.normal<-scale(train_var[,-14], center = TRUE, scale = TRUE)
+head(train.normal)
+```
+```{r Code Chunk-37}
+train.act<-data.frame(train.normal,SleepTrouble=train_var$SleepTrouble)
+#head(train.act)
+```
+```{r Code Chunk-38}
+# converting the SleepTrouble variable to 1 and 0 fro YEs and No respectively
+train.act$SleepTrouble <- ifelse(train.act$SleepTrouble=="Yes",1,0)
+X<-train.act%>% filter(SleepTrouble==0)
+Y<-train.act%>% filter(SleepTrouble==1)
+#dim(X)
+#dim(Y)
+```
+
+#### Preprocessing Test Data:
+
+ All the preprocessing steps done for training data are done for test data just before checking the model's performance.
+
+```{r Code Chunk-39}
+#Missing values in Poverty
+#summary(test.dat$Poverty)
+test.dat$Poverty[is.na(test.dat$Poverty)]<-median(test.dat$Poverty,na.rm=TRUE)
+#sum(is.na(test.dat$Poverty))
+#Missing values in BMI
+#summary(test.dat$BMI)
+test.dat$BMI[is.na(test.dat$BMI)]<-mean(test.dat$BMI,na.rm=TRUE)
+#sum(is.na(test.dat$BMI))
+#Missing values in Age
+#summary(test.dat$Age)
+test.dat$Age[is.na(test.dat$Age)]<-mean(test.dat$Age,na.rm=TRUE)
+#sum(is.na(test.dat$Age))
+#Missing values in TotChol
+#summary(test.dat$TotChol)
+test.dat$TotChol[is.na(test.dat$TotChol)]<-mean(test.dat$TotChol,na.rm=TRUE)
+#sum(is.na(test.dat$TotChol))
+#Missing values in UrineFlow1
+#summary(test.dat$UrineFlow1)
+test.dat$UrineFlow1[is.na(test.dat$UrineFlow1)]<-mean(test.dat$UrineFlow1,na.rm=TRUE)
+#sum(is.na(test.dat$UrineFlow1))
+#Missing values in UrineVol1
+#summary(test.dat$UrineVol1)
+test.dat$UrineVol1[is.na(test.dat$UrineVol1)]<-mean(test.dat$UrineVol1,na.rm=TRUE)
+#sum(is.na(test.dat$UrineVol1))
+#Missing values in BPSysAve
+#summary(test.dat$BPSysAve)
+test.dat$BPSysAve[is.na(test.dat$BPSysAve)]<-mean(test.dat$BPSysAve,na.rm=TRUE)
+#sum(is.na(test.dat$BPSysAve))
+#Missing values in DirectChol
+#summary(test.dat$DirectChol)
+test.dat$DirectChol[is.na(test.dat$DirectChol)]<-mean(test.dat$DirectChol,na.rm=TRUE)
+#sum(is.na(test.dat$DirectChol))
+#Missing values in BPDiaAve
+#summary(test.dat$BPDiaAve)
+test.dat$BPDiaAve[is.na(test.dat$BPDiaAve)]<-mean(test.dat$BPDiaAve,na.rm=TRUE)
+#sum(is.na(test.dat$BPDiaAve))
+#Missing values in Pulse
+#summary(test.dat$Pulse)
+test.dat$Pulse[is.na(test.dat$Pulse)]<-mean(test.dat$Pulse,na.rm=TRUE)
+#sum(is.na(test.dat$Pulse))
+#Missing values in AlcoholYear
+#summary(test.dat$AlcoholYear)
+test.dat$AlcoholYear[is.na(test.dat$AlcoholYear)]<-mean(test.dat$AlcoholYear,na.rm=TRUE)
+#sum(is.na(test.dat$AlcoholYear))
+#Missing values in HomeRooms
+#summary(test.dat$AlcoholYear)
+test.dat$HomeRooms[is.na(test.dat$HomeRooms)]<-mean(test.dat$HomeRooms,na.rm=TRUE)
+#sum(is.na(test.dat$HomeRooms))
+#Missing values in HHIncomeMid
+#summary(test.dat$AlcoholYear)
+test.dat$HHIncomeMid[is.na(test.dat$HHIncomeMid)]<-mean(test.dat$HHIncomeMid,na.rm=TRUE)
+#sum(is.na(test.dat$HHIncomeMid))
+
+
+```
+
+```{r Code Chunk-40}
+test_var<-data.frame(BMI=test.dat$BMI,Age=test.dat$Age,TotChol=test.dat$TotChol,
+                 UrineFlow1=test.dat$UrineFlow1,UrineVol1=test.dat$UrineVol1,
+                 BPSysAve=test.dat$BPSysAve,
+                 DirectChol=test.dat$DirectChol,BPDiaAve=test.dat$BPDiaAve,
+                 Pulse=test.dat$Pulse,
+                 Poverty=test.dat$Poverty,AlcoholYear=test.dat$AlcoholYear,
+                 HomeRooms=test.dat$HomeRooms,HHIncomeMid=test.dat$HHIncomeMid,
+                 SleepTrouble=test.dat$SleepTrouble)
+test.normal<-scale(test_var[,-14], center = TRUE, scale = TRUE)
+test.act<-data.frame(test.normal,SleepTrouble=test_var$SleepTrouble)
+test.act$SleepTrouble <- ifelse(test.act$SleepTrouble=="Yes",1,0)
+#head(test.act)
+
+```
+```{r Code Chunk-41}
+x<-test.act%>% filter(SleepTrouble==0)
+y<-test.act%>% filter(SleepTrouble==1)
+#dim(x)
+#dim(y)
+```
+
+### Logistic Regression
+
+  The NHANES data is preprocessed to select the important variables. Further the data is split into 90/10 (90% Training data and 10% Test data). As the classes of Target variable are unequal before splitting measures were taken to make sure training and test data have equal proportions of records.
+  Three logistic regression models were fit based on the top most important variables selected in the preprocessing steps using Random Forest classifier.
+  In each of fits, using test data and a threshold of 0.5 the misclassification was approximately 0.25 ,True Positive Rate is 0 and True Negative Rate is 1 indicating all the individuals having no sleep trouble are being predicted 100% accurately but individuals having sleep trouble are not being predicted accurately. By modifying the threshold the TPR is improved and TNR turned out to be reasonable for all the models (missclassification rate is declined). All the Metrics are presented below .
+
+```{r Code Chunk-42}
+mod1.glm <-glm(SleepTrouble~.,data=train.act,family="binomial")
+cat("\nSummary of Logistic Regression Model 1:\n")
+summary(mod1.glm)
+```
+
+```{r Code Chunk-43}
+mod1.glm.pred <-predict.glm(mod1.glm,test.act,type="response")
+#mod1.glm.pred 
+#weekly.pred_glm2 <- ifelse(weekly.pred_glm2 >=0.5,1,0)
+#weekly.test.glm2 <- cbind(weekly.test2,pred_glm=weekly.pred_glm2)
+mod1.glm.res <- misclass.fun(mod1.glm.pred,test.act$SleepTrouble,threshold=0.5)
+#kable(data.frame(Metrics=mod1.glm.res),digits=7,caption='*Fit with 13 Variables & 0.5 Threshold*')
+
+mod1.glm.res1 <- misclass.fun(mod1.glm.pred,test.act$SleepTrouble,threshold=0.4)
+#kable(data.frame(Metrics=mod1.glm.res1),digits=7,caption='*Fit with 13 Variables & 0.4 Threshold*')
+mod1.glm.res2 <- misclass.fun(mod1.glm.pred,test.act$SleepTrouble,threshold=0.3)
+kable(data.frame('Threshold_0.5'=mod1.glm.res,'Threshold_0.4'=mod1.glm.res1,'Threshold_0.3'=mod1.glm.res2),digits=7,caption='*Fit with 13 Variables*')
+```
+```{r Code Chunk-44}
+d1<-data.frame('Threshold_0.5'=mod1.glm.res,'Threshold_0.4'=mod1.glm.res1,'Threshold_0.3'=mod1.glm.res2)
+dat1t<-cbind(as.data.frame(t(d1)),Threshold=c(0.5,0.4,0.3))
+#dat1t
+plot(1, type="n",xlim=c(0.25,0.5), ylim=c(0,1.0),xlab=" Threshold",ylab="Values",main="Effect of Threshold On Metrics for Logistic Regression Model 1",cex.main=0.9,cex.lab=0.8)
+lines(dat1t$Threshold,dat1t$Sensitivity,type = "b",pch=16,col="green")
+lines(dat1t$Threshold,dat1t$Specificity,type = "b",pch=16,col="blue")
+lines(dat1t$Threshold,dat1t$`Misclassification Rate`,type = "b",pch=16,col="red")
+legend("topleft",legend=c("Specificity", "Misclassification","Sensitivity"),
+       col=c("blue","red","green"), lty=1, cex=0.6)
+```
+
+
+```{r Code Chunk-45}
+mod2.glm<-glm(SleepTrouble~BMI+TotChol+Age+UrineFlow1+UrineVol1+BPSysAve+Poverty
+              +DirectChol+BPDiaAve+Pulse,data=train.act,family="binomial")
+cat("\nSummary of Logistic Regression Model 2:\n")
+summary(mod2.glm)
+```
+
+```{r Code Chunk-46}
+mod2.glm.pred <- predict.glm(mod2.glm,test.act[,c(1:11)],
+                         type="response")
+#mod1.glm.pred 
+#weekly.pred_glm2 <- ifelse(weekly.pred_glm2 >=0.5,1,0)
+#weekly.test.glm2 <- cbind(weekly.test2,pred_glm=weekly.pred_glm2)
+mod2.glm.res <- misclass.fun(mod2.glm.pred,test.act$SleepTrouble,threshold=0.5)
+mod2.glm.res1 <- misclass.fun(mod2.glm.pred,test.act$SleepTrouble,threshold=0.4)
+mod2.glm.res2 <- misclass.fun(mod2.glm.pred,test.act$SleepTrouble,threshold=0.3)
+kable(data.frame('Threshold_0.5'=mod2.glm.res,'Threshold_0.4'=mod2.glm.res1,
+                 'Threshold_0.3'=mod2.glm.res2),digits=7,caption='*Fit with 7 variables*')
+```
+```{r Code Chunk-47}
+d2<-data.frame('Threshold_0.5'=mod2.glm.res,'Threshold_0.4'=mod2.glm.res1,
+                 'Threshold_0.3'=mod2.glm.res2)
+dat2t<-cbind(as.data.frame(t(d2)),Threshold=c(0.5,0.4,0.3))
+plot(1, type="n",xlim=c(0.25,0.5), ylim=c(0,1.0),xlab=" Threshold",ylab="Values",main="Effect of Threshold On Metrics for Logistic Regression Model 2",cex.main=0.9,cex.lab=0.8)
+lines(dat2t$Threshold,dat2t$Sensitivity,type = "b",pch=16,col="green")
+lines(dat2t$Threshold,dat2t$Specificity,type = "b",pch=16,col="blue")
+lines(dat2t$Threshold,dat2t$`Misclassification Rate`,type = "b",pch=16,col="red")
+legend("topleft",legend=c("Specificity", "Misclassification","Sensitivity"),
+       col=c("blue","red","green"), lty=1, cex=0.6)
+```
+
+```{r Code Chunk-48}
+
+mod3.glm<-glm(SleepTrouble~BMI+Age+Poverty+Pulse,
+              data=train.act,family="binomial")
+cat("\nSummary of Logistic Regression Model 3:\n")
+summary(mod3.glm)
+```
+```{r Code Chunk-49}
+mod3.glm.pred <- predict.glm(mod3.glm,test.act[,c(1,2,6,7,8,9,10,11,12,13,14)],
+                         type="response")
+#mod1.glm.pred 
+#weekly.pred_glm2 <- ifelse(weekly.pred_glm2 >=0.5,1,0)
+#weekly.test.glm2 <- cbind(weekly.test2,pred_glm=weekly.pred_glm2)
+mod3.glm.res <- misclass.fun(mod3.glm.pred,test.act$SleepTrouble,threshold=0.5)
+mod3.glm.res1 <- misclass.fun(mod3.glm.pred,test.act$SleepTrouble,threshold=0.4)
+mod3.glm.res2 <- misclass.fun(mod3.glm.pred,test.act$SleepTrouble,threshold=0.3)
+dat3<-kable(data.frame('Threshold_0.5'=mod3.glm.res,'Threshold_0.4'=mod3.glm.res1,
+                 'Threshold_0.3'=mod3.glm.res2),digits=7,caption='*Fit with Top 4 significant variables*')
+dat3
+```
+
+
+```{r Code Chunk-50}
+d3<-data.frame('Threshold_0.5'=mod3.glm.res,'Threshold_0.4'=mod3.glm.res1,
+                 'Threshold_0.3'=mod3.glm.res2)
+dat3t<-cbind(as.data.frame(t(d3)),Threshold=c(0.5,0.4,0.3))
+#dat3t
+plot(1, type="n",xlim=c(0.25,0.5), ylim=c(0,1.0),xlab=" Threshold",ylab="Values",main="Effect of Threshold On Metrics for Logistic Regression Model 3",cex.main=0.9,cex.lab=0.8)
+lines(dat3t$Threshold,dat3t$Sensitivity,type = "b",pch=16,col="green")
+lines(dat3t$Threshold,dat3t$Specificity,type = "b",pch=16,col="blue")
+lines(dat3t$Threshold,dat3t$`Misclassification Rate`,type = "b",pch=16,col="red")
+legend("topleft",legend=c("Specificity", "Misclassification","Sensitivity"),
+       col=c("blue","red","green"), lty=1, cex=0.6)
+```
+  
+  Considering the p values of all the logistic models the variables like BMI,Age,Poverty, Systolic Blood Pressure, Pulse and Total HDL Cholesterol effects the sleep patterns of the individuals. However, the logistic regression model cannot give accurate predictions as the TPR is very low, cannot predict the individuals with Sleep Trouble atleast reasonably and the misclassification rate is also high.I believe this can be due to the drastic difference in the proportion of the classes in the data provided and also not all information collected is from same age group i.e., information for few predictors is collected from ages 6 and above, few collected from 20 and above etc. This could have affected the variable selection process and the even the classification within the target variable.
+
+
+### K-Nearest Neighbors (KNN)
+
+  Using the same predictors and response variable as before a knn model is fit.The training and test data obtained by 90/10 split is used for analysis.K values from 1 to 100 were investigated and a graph showing the misclassification, sensitivity, and specificity for all the K values is plotted.
+
+```{r code Chunk-51}
+train.act.knn<-train.act[,-c(11,12,13,14)]
+test.act.knn<-test.act[,-c(11,12,13,14)]
+train.act.knn.y<-train.act[,14]
+test.act.knn.x<-test.act[,14]
+```
+
+```{r Code Chunk-52}
+set.seed(202111)
+cat("\nknn model fit for a k value of 1:\n\n",'knn(train.act.knn,test.act.knn,cl=train.act.knn.y,k=1)')
+temp_knn <- knn(train.act.knn,test.act.knn,cl=train.act.knn.y,k=1)
+#tab<-table(temp_knn,test.act.knn.x)
+
+#accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+#accuracy(tab)
+ 
+temp_sum<-misclass.fun.sp(temp_knn,test.act.knn.x)
+#temp_sum
+
+```
+
+
+```{r Code Chunk-}
+set.seed(202111)
+#New data frame created 
+nhanes_knn.dat <-data.frame(K=numeric(),Misclassification=numeric(),Sensitivity=numeric(),Specificity=numeric())
+
+for(k in 1:100){
+  temp_knn <- knn(train.act.knn,test.act.knn,cl=train.act.knn.y,k=k)
+  temp_sum<-misclass.fun.sp(temp_knn,test.act.knn.x)
+  nhanes_knn.dat[k,1] <- k
+  nhanes_knn.dat[k,2] <- as.numeric(temp_sum[1])
+  nhanes_knn.dat[k,3] <- as.numeric(temp_sum[2])
+  nhanes_knn.dat[k,4] <- as.numeric(temp_sum[3])
+}
+#nhanes_knn.dat
+```
+```{r Code Chunk-53}
+ggplot(data=nhanes_knn.dat, aes(K)) +
+  labs(title="Summary of Metrics per value of Hyperparameter, K",color='Metric',x='K',y='Values') +
+  geom_line(aes(y = Misclassification, color = "Misclassification")) + 
+  geom_line(aes(y = Sensitivity, color = "Sensitivity")) +
+  geom_line(aes(y = Specificity, color = "Specificity")) + 
+  geom_vline(xintercept = 1, linetype="dotted", color = 'black')+
+  theme(plot.title = element_text(size=12))
+```
+
+```{r Code Chunk-54}
+nhanes_knn_res <- data.frame(Metrics=c('Misclassification Rate','Sensitivity','Specificity'),Values=c(nhanes_knn.dat[1,2],nhanes_knn.dat[1,3],nhanes_knn.dat[1,4]))
+kable(nhanes_knn_res,digits=5,caption='Metrics for KNN Model Where K=1')
+```
+
+   At a K value of 1, looking at the misclassification rate, sensitivity and specificity I still consider the variables BMI,Age,Poverty, Systolic Blood Pressure, Pulse and Total HDL Cholesterol effects the sleep patterns of the individuals. However, the knn model is not giving an accurate predictions.The TPR rate of about 0.5 indicates that only half of the individuals with sleep trouble are being predicted accurately. The TNR of 0.84 is reasonable and the model is able to predict the individuals with out sleep trouble resonably. And there is a missclassification rate of 25% which is not good.
+
+
+### Linear Discriminant Analysis (LDA)
+
+  Using the same predictors and response variable as before two LDA models were fit.The training and test data obtained by 90/10 split is used for analysis. First LDA fit has the top 10 variables listed per variable importance table of Random Forest and second model was fit using variables BMI, Age, BPSysAve, Poverty, DirectChol, Pulse. The misclassification, sensitivity, and specificity was evaluated for both the models using the test data. Both the fits have a misclassification rate of about 25% and Sensitivity 0 and Specificity 1 indicating that the test data did not make accurate predictions. 
+
+```{r Code Chunk-55}
+set.seed(202111)
+train.act.lda<-train.act[,-c(11,12,13)]
+test.act.lda<-test.act[,-c(11,12,13)]
+
+nhanes.lda <- lda(SleepTrouble~.,data=train.act.lda)
+cat("\nLDA fit for NHANES data using top 10 important variables:\n\n")
+nhanes.lda$call
+nhanes.pred.lda <- predict(nhanes.lda,test.act.lda)
+#table(nhanes.pred.lda,test.act.lda$SleepTrouble)
+#auto.test <- cbind(test.act.lda$SleepTrouble,pred_lda=as.numeric(nhanes.pred.lda$class)-1)
+
+nhanes.lda.res <- misclass.fun.sp(nhanes.pred.lda$class,test.act.lda$SleepTrouble)
+kable(data.frame(Metrics=nhanes.lda.res),digits=5,caption = 'Results of LDA, Fit 1')
+#Histogram of the model
+cat("\nHistogram for LDA fit 1:\n")
+ldahist(data=nhanes.pred.lda$x[,1],test.act.lda$SleepTrouble)
+```
+
+
+```{r Code Chunk-56}
+nhanes.lda1 <- lda(SleepTrouble~BMI+Age+BPSysAve+Poverty
+              +DirectChol+Pulse,data=train.act.lda)
+cat("\nLDA fit for NHANES data using top 6 important variables,fit 2:\n\n")
+nhanes.lda1$call
+nhanes.pred.lda1 <- predict(nhanes.lda1,test.act.lda[,c("BMI","Age","BPSysAve","Poverty","DirectChol","Pulse")])
+#table(nhanes.pred.lda,test.act.lda$SleepTrouble)
+#auto.test <- cbind(test.act.lda$SleepTrouble,pred_lda=as.numeric(nhanes.pred.lda$class)-1)
+nhanes.lda.res1 <- misclass.fun.sp(nhanes.pred.lda1$class,test.act.lda$SleepTrouble)
+kable(data.frame(Metrics=nhanes.lda.res1),digits=5,caption = 'Results of LDA,Fit 2')
+#Plotting Histogram
+cat("\nHistogram for LDA fit 2:\n")
+ldahist(data=nhanes.pred.lda1$x[,1],test.act.lda$SleepTrouble)
+
+```
+
+ The misclassification rate, sensitivity and specificity for both the models are not great.The TPR rate of about 0 and TNR of 1 indicates that only individuals who do not have any sleep trouble are being identified accurately and the individuals who actually have trouble sleep are not being predicted accurately at all.And there is a missclassification rate of 25% which is not good enough.The Histograms from both the fit clealy indicate that there is a complete overlap and the models were not able to separate the groups. This behavior shows that the data is linearly related and LDA cannot separately linearly related data.
+ 
+ 
+### Quadratic discriminant analysis (QDA)
+
+  Similar to LDA models the same predictors and response variable were used to fit two QDA models.The training and test data obtained by 90/10 split is used for analysis. First QDA fit has the top 10 variables listed per variable importance table of Random Forest and second model was fit using variables BMI, Age, BPSysAve, Poverty, DirectChol, Pulse. The misclassification, sensitivity, and specificity was evaluated for both the models using the test data. Both the fits have a misclassification rate of about 29% and Specificity 0.9. However, the first model's sensitivity(0.15) is little better compared to the second model(0.13). 
+
+```{r Code Chunk-57}
+set.seed(202111)
+train.act.qda<-train_var[,-c(11,12,13)]
+test.act.qda<-test_var[,-c(11,12,13)]
+
+nhanes.qda <- qda(SleepTrouble~.,data=train.act.qda,method="t")
+cat("\nQDA fit for NHANES data using top 10 important variables:\n\n")
+nhanes.qda$call
+nhanes.pred.qda <- predict(nhanes.qda,test.act.qda)
+#table(nhanes.pred.lda,test.act.lda$SleepTrouble)
+#auto.test <- cbind(test.act.lda$SleepTrouble,pred_lda=as.numeric(nhanes.pred.lda$class)-1)
+
+tab<-table(nhanes.pred.qda$class,test.act.qda$SleepTrouble)
+#nhanes.qda.res <- misclass.fun.sp(nhanes.pred.qda$class,test.act.qda$SleepTrouble)
+#kable(data.frame(Metrics=nhanes.lda.res),digits=5,caption = 'Results of QDA, Fit 1')
+#Histogram of the model
+accuracy <- function(x){accuracy<- sum(diag(x)/(sum(rowSums(x))))
+ misclassfication <- 1-(sum(diag(x)/(sum(rowSums(x)))))
+  sensitivity <- x[2,2]/(x[2,2]+x[1,2])
+  specificity <- x[1,1]/(x[1,1]+x[2,1])
+  
+  Info.Table<- c('Misclassification Rate'=misclassfication,                  'Sensitivity'=sensitivity,'Specificity'=specificity)
+  return(Info.Table)}
+qda.res<-accuracy(tab)
+kable(data.frame(Metrics=qda.res),digits=5,caption = 'Results of QDA, Fit 1')
+```
+
+```{r Code Chunk-58}
+set.seed(202111)
+train.act.qda<-train_var[,-c(11,12,13)]
+test.act.qda<-test_var[,-c(11,12,13)]
+
+nhanes.qda1<- qda(SleepTrouble~BMI+Age+BPSysAve+Poverty
+              +DirectChol+Pulse,data=train.act.qda,method="t")
+cat("\nQDA fit for NHANES data using 6 important variables:\n\n")
+nhanes.qda1$call
+nhanes.pred.qda1 <- predict(nhanes.qda1,test.act.qda)
+#table(nhanes.pred.lda,test.act.lda$SleepTrouble)
+#auto.test <- cbind(test.act.lda$SleepTrouble,pred_lda=as.numeric(nhanes.pred.lda$class)-1)
+
+tab1<-table(nhanes.pred.qda1$class,test.act.qda$SleepTrouble)
+#nhanes.qda.res <- misclass.fun.sp(nhanes.pred.qda$class,test.act.qda$SleepTrouble)
+#kable(data.frame(Metrics=nhanes.lda.res),digits=5,caption = 'Results of QDA, Fit 1')
+#Histogram of the model
+accuracy <- function(x){accuracy<- sum(diag(x)/(sum(rowSums(x))))
+ misclassfication <- 1-(sum(diag(x)/(sum(rowSums(x)))))
+  sensitivity <- x[2,2]/(x[2,2]+x[1,2])
+  specificity <- x[1,1]/(x[1,1]+x[2,1])
+  
+  Info.Table<- c('Misclassification Rate'=misclassfication,                  'Sensitivity'=sensitivity,'Specificity'=specificity)
+  return(Info.Table)}
+qda.res1<-accuracy(tab1)
+kable(data.frame(Metrics=qda.res1),digits=5,caption = 'Results of QDA, Fit 2')
+```
+  The below plot shows the classification of observations based on QDA method for each combination of variables in training data. The error rate is also displayed for a combination of variable.
+  
+```{r fig.width=12,fig.height=12}
+partimat(as.factor(SleepTrouble)~BMI+Age+DirectChol+Pulse+Poverty+TotChol+
+           UrineFlow1+BPSysAve+BPDiaAve+UrineVol1,
+         data=train.act.qda,method='qda',plot.matrix=T,
+         imageplot =T, Main='QDA Partition Plot for 5 Best Features')
+
+```
+
+  The misclassification rate, sensitivity and specificity for both the models are not great.The TPR rate of about 0.15 for first fit and 0.13 for the second fit indicate that only about 15% and 13% of the individuals having sleep trouble are predicted accurately using QDA classifier.TNR of 0.9 indicates that only 90% individuals who do not have any sleep trouble are being identified accurately.And there is a missclassification rate of 29% which is not good enough. Though QDA fits did little better than the LDA both the models cannot provide any useful information.
+  
+  
+### Neural Network
+
+  Similar to all other models the predictors BMI, Age, DirectChol, Pulse, Poverty, ToChol, UrineFlow1, urineVol1, BPSysAve, BPDiaAve were used.The training and test data obtained by 90/10 split is used for analysis. 
+  Six different models were fit using *nnet()* function with various combination of parameters like Size, threshold, maxit,decay. The model with a size of 5 and maxit of 10000 resulted in the worst fir with a TPR and TNR of 0. A better model was obtained when size is 75,maxit is 1000, decay is 0.0005 and threshold is 0.45 (TPR of 0.44 and TNR of 0.78). It is observed that with addition of decay and threshold as hyperparametes the performance is improved.
+  
+```{r Code Chunk-59}
+set.seed(202111)
+test.act.nn<-data.frame(test.normal,SleepTrouble=test_var$SleepTrouble)
+train.act.nn<-data.frame(train.normal,SleepTrouble=train_var$SleepTrouble)
+train.act.nn<-train_var[,-c(11,12,13)]
+test.act.nn<-test_var[,-c(11,12,13)]
+form.toy=form <- as.formula(
+  "SleepTrouble~.")
+```
+
+```{r Code Chunk-60}
+set.seed(202111)
+mod.nn.1 <- nnet(form, data= train.act.nn, size=5, maxit= 10000,trace=FALSE)
+cat("\nNeuralnet,Fit-1:\n\n")
+print(mod.nn.1)
+preds.mod.nn.1=predict(mod.nn.1, newdata = test.act.nn, type="class")
+con.tab.1=cbind(Truth=as.vector(test.act.nn$SleepTrouble),Pred=preds.mod.nn.1)
+tab<-xtabs(~Truth+Pred,con.tab.1)
+#mean(con.tab.2[,1]==con.tab.2[,2])
+#nn.res1<-accuracy(xtabs(~Truth+Pred, con.tab.1))
+
+misclassfication <- 1-(sum(diag(tab)/(sum(rowSums(tab)))))
+
+#nn.res1<-data.frame('Misclassification Rate'=misclassfication,'Sensitivity'=0,'Specificity'=0) 
+nn.res1<-(t(data.frame('Misclassification Rate'=misclassfication,'Sensitivity'=0,'Specificity'=0)))
+kable(data.frame(Metrics=nn.res1),digits=5,caption = 'Results of NeuralNet-Fit 1(size=5,maxit=10000)')
+  
+```
+```{r Code Chunk-61}
+set.seed(202111)
+mod.nn.2 <- nnet(form, data= train.act.nn, size=50, maxit= 1000,trace=FALSE)
+cat("\nNeuralnet,Fit-2:\n\n")
+print(mod.nn.2)
+preds.mod.nn.2=predict(mod.nn.2, newdata = test.act.nn, type="class")
+con.tab.2=cbind(Truth=as.vector(test.act.nn$SleepTrouble), Pred=preds.mod.nn.2)
+tabnn<-xtabs(~Truth+Pred, con.tab.2)
+#mean(con.tab.2[,1]==con.tab.2[,2])
+nn.res2<-accuracy(tabnn)
+kable(data.frame(Metrics=nn.res2),digits=5,caption = 'Results of NeuralNet-Fit 2(size=50,maxit=1000)')
+```
+
+```{r Code Chunk-62}
+set.seed(202111)
+mod.nn.3 <- nnet(form, data= train.act.nn, size=75, maxit= 1000,trace=FALSE)
+cat("\nNeuralnet,Fit-3:\n\n")
+print(mod.nn.3)
+preds.mod.nn.3=predict(mod.nn.3, newdata = test.act.nn, type="class")
+con.tab.3=cbind(Truth=as.vector(test.act.nn$SleepTrouble), Pred=preds.mod.nn.3)
+tabnn1<-xtabs(~Truth+Pred, con.tab.3)
+#mean(con.tab.3[,1]==con.tab.3[,2])
+nn.res3<-accuracy(tabnn1)
+kable(data.frame(Metrics=nn.res3),digits=5,caption = 'Results of NeuralNet-Fit 3(size=75,maxit=1000)')
+```
+```{r Code Chunk-63}
+set.seed(202111)
+mod.nn.4 <- nnet(form, data= train.act.nn, size=75, maxit= 2000,decay=0.0005,trace=FALSE)
+cat("\nNeuralnet,Fit-4:\n\n")
+print(mod.nn.4)
+preds.mod.nn.4=predict(mod.nn.4, newdata = test.act.nn, type="class")
+con.tab.4=cbind(Truth=as.vector(test.act.nn$SleepTrouble), Pred=preds.mod.nn.4)
+tab.nn4 <-xtabs(~Truth+Pred, con.tab.4)
+#mean(con.tab.4[,1]==con.tab.4[,2])
+nn.res4<-accuracy(tab.nn4)
+kable(data.frame(Metrics=nn.res4),digits=5,caption = 'Results of NeuralNet-Fit 4 (size=75,maxit=2000,decay=0.0005)')
+```
+```{r Code Chunk-64}
+set.seed(202111)
+mod.nn.5 <- nnet(form, data= train.act.nn, size=75, maxit= 1000,decay=0.0005,threshold=0.45,trace=FALSE)
+cat("\nNeuralnet,Fit-5:\n\n")
+print(mod.nn.5)
+preds.mod.nn.5=predict(mod.nn.5, newdata = test.act.nn, type="class")
+con.tab.5=cbind(Truth=as.vector(test.act.nn$SleepTrouble), Pred=preds.mod.nn.5)
+tab.nn5 <-xtabs(~Truth+Pred, con.tab.5)
+mean(con.tab.5[,1]==con.tab.5[,2])
+nn.res5<-accuracy(tab.nn5)
+#nn.res
+kable(data.frame(Metrics=nn.res5),digits=5,caption = 'Results of NeuralNet-Fit 5 (size=75,maxit=1000,decay=0.0005,threshold=0.45)')
+```
+```{r Code Chunk-65}
+set.seed(202111)
+mod.nn.6 <- nnet(form, data= train.act.nn, size=75, maxit= 2000,threshold=0.45,trace=FALSE)
+cat("\nNeuralnet,Fit-6:\n\n")
+print(mod.nn.6)
+preds.mod.nn.6=predict(mod.nn.6, newdata = test.act.nn, type="class")
+con.tab.6=cbind(Truth=as.vector(test.act.nn$SleepTrouble), Pred=preds.mod.nn.6)
+tab.nn6 <-xtabs(~Truth+Pred, con.tab.6)
+mean(con.tab.6[,1]==con.tab.6[,2])
+nn.res6<-accuracy(tab.nn6)
+kable(data.frame(Metrics=nn.res6),digits=5,caption = 'Results of NeuralNet-Fit 6 (size=75,maxit=1000,threshold=0.45)')
+```
+
+```{r Code Chunk-66}
+kable(data.frame(Fit1=nn.res1,Fit2=nn.res2,Fit3=nn.res3,Fit4=nn.res4,Fit5=nn.res5,Fit6=nn.res6),digits=5,caption = ' Comparitive results of NeuralNet')
+```
+```{r Code Chunk-67, fig.height=18,fig.width=18}
+cat("\nPlot of Fit-5 with a TPR of 0.44 and TNR of 0.78:\n\n")
+plotnet(mod.nn.5)
+```
+
+  The misclassification rate, sensitivity and specificity were improved with parameters decay(0.0005) and threshold (0.45) and hidden nodes(75) when compared to all other fits.The TPR rate of about 0.44 and TNP of 0.78 indicates that 44% of individuals who have any sleep trouble and 78 % of individuals who do not have sleep trouble are being identified accurately.And the missclassification rate is 27% which is not good enough. tuning of the hyperparameters will improve the performance of the models.However,lot of computational time is involved while using neural netweork classifier and has to be considered while selecting a better model.
+  
+  
+  
+*2) What classifier do you recommend from Exercise 1 and why?*
+
+### Answer:
+
+  Metrics from all the different classifiers were tabulated below for comparison.
+
+```{r Code Chunk-68}
+kable(data.frame(NeuralNet=nn.res5,QDA=qda.res,LDA=nhanes.lda.res1,KNN=nhanes_knn_res$Values,LogReg=mod1.glm.res2),digits=5,caption ='Comparitive Metrics from all Classifiers')
+
+```
+
+  From the table it is clear that KNN classifier at a K value of 1 resulted in better fit with a TPR of 0.5,TNR of 0.8 and Test error of 0.24.Tuning the hyper parameters of other classifiers might have resulted in better models but for the selected variables KNN performed well and was pretty quick. Though the metrics from KNN are reasonable when compared to others overall accuracy of predictions is low.I believe that this might be due to the difference in the proportion of the classes in the data provided and also not all information collected is from same age group resulting in more missing values.
+
+
+### References
+
+- NHANES.pdf by Randall Pruim, *Package 'NHANES'*, August 29,2016.
+- Blogpost by StackExchange,*How to replace NA values with another value in factors in R?*
+- Blogpost by DATATRICKS,*One-hot encoding in R: three simple methods*, July 3,2019
+- Blogpost by DATANOVIA,*Identify and Remove Duplicate Data in R*
+- Vlogpost by Machine Learning Mastery,*Feature Selection with the Caret R Package*, August 22,2019
+- caretSelection by Max Kuhn,*Variable Selection Using The caret Package*,June 30,2009
+- Blogpost by Dataaspirant,*FEATURE SELECTION TECHNIQUES WITH R*,January 15,2018
+- Blogpost by DataSharkie,*How to Standardize Data in R*
+- Blogpost by ScienceDirect,*True Positive Rate*
+- Blogpost by towards data science,*K-nearest Neighbors Algorithm with Examples in R (Simply Explained knn)*,December 30,2018
+- Lecture by Dr. Bharatendra Rai,*Linear Discriminant Analysis in R | Example with Classification Model & Bi-Plot interpretation*,July 8,2017
+- Lecture by Dr. Saunders,*Neuralnet Lecture*,April 16,2021
+- R Documentation- qda{MASS},*Quadratic Discriminant Analysis*
+- Lecture by dataAnalysisR,*Neural Network for iris data with R - nnetR1*,April 13, 2020
