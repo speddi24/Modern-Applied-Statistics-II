@@ -1,0 +1,791 @@
+---
+title: "Homework 6"
+author: "Snigdha Peddi"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F,warning=F,message=F)
+```
+
+```{r libraries}
+#install.packages("ISLR")
+library(ISLR)
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("knitr")
+library(knitr)
+#install.packages("tidyr")
+library(tidyr)
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("GGally")
+library(GGally)
+#install.packages("MASS")
+library(MASS)
+#install.packages("purrr")
+library(purrr)
+#install.packages("mclust")
+library(mclust)
+#install.packages('class')
+library(class)
+#install.packages('blorr')
+library(blorr)
+```
+
+**Question 1: Question 4.7.7 pg 170 show your work, feel free to use R and use echo = T to show your code.**
+
+Density Function:
+
+$$
+f(x) = \frac{1}{\sqrt{2\pi\sigma^2}}{e^\frac{-(x-\mu)^2}{2\sigma^2}}
+$$
+
+For the companies that did not issue dividend,$\mu=0$:
+
+By plugging in the given values $x=4,\sigma^2=36$ in the density function we get,
+
+$$
+f(x) = \frac{1}{\sqrt{2\pi\sigma^2}}{e^\frac{-(x-\mu)^2}{2\sigma^2}}
+$$
+$$
+      =\frac{1}{\sqrt{2\pi*36}}{e^\frac{-(4-0)^2}{2*36}}
+$$
+$$
+     =\frac{1}{6\sqrt{2\pi}}{e^\frac{-16}{2*36}}
+$$
+$$
+      =\frac{1}{6\sqrt{2\pi}}{e^\frac{-2}{9}}
+$$
+$$
+      =\frac{1}{6*2.5066282746}(0.8007374029)
+$$
+$$
+     =0.0532413343
+$$
+
+For the companies that issued dividend, $\mu=10$:
+
+By plugging in the given values $x=4,\sigma^2=36$ in the density function we get,
+
+$$
+f(x) =\frac{1}{\sqrt{2\pi\sigma^2}}{e^\frac{-(x-\mu)^2}{2\sigma^2}}
+$$
+$$
+     =\frac{1}{\sqrt{2\pi*36}}{e^\frac{-(4-10)^2}{2*36}}
+$$
+$$
+  =\frac{1}{6\sqrt{2\pi}}{e^\frac{-36}{2*36}} 
+$$
+$$
+      =\frac{1}{6\sqrt{2\pi}}{e^\frac{-1}{2}}
+$$
+
+$$
+        =\frac{1}{6*2.5066282746}(0.6065306597)
+$$
+
+$$
+      =0.0403284541
+$$
+According to Bayes theorem,
+
+$$
+P_{(D=Yes/f(4))} = {\frac{(0.0403284541)(0.80)}{(0.0532413343)(0.20)+(0.0403284541)(0.80)}}
+$$
+$$
+={\frac{(0.0322627633)}{0.0106482669+0.0322627633}}
+$$
+$$
+={\frac{(0.0322627633)}{0.0429110302}}
+$$
+$$
+=0.7518524526
+$$
+The probability that a company will issue a dividend this year given that its percentage profit was X = 4 last year is 75.18% .
+
+**Question 2:Continue from Homework #3 & 4 using the Auto dataset from 4.7.11. Construct a model (using the predictors chosen for previous homework) and fit this model using MclustDA function from the mclust library. Use the same training and test set from previous homework assignments.**
+
+```{r Code Chunk-1}
+auto<-ISLR::Auto
+#creating a new variable mpg01 in auto dataset based on median value
+auto$mpg01<-ifelse(auto$mpg>median(auto$mpg),1,0)
+# removing the original mpg variable and creating a new auto dataset
+auto1<-data.frame(auto[,-1])
+#Swaping the last column to first
+auto1<- auto1[c(9,1,2,3,4,5,6,7,8)]
+#Summary of dataset
+#cat("\n Summary of New Auto Data:\n")
+#summary(auto1)
+```
+
+
+```{r Code Chunk-2}
+#selecting size of the train set
+size<-floor(0.70*nrow(auto1))
+#setting seed to obtain same results each time
+set.seed(274)
+#Randomly sampling the rows of dataset of specified size and saving the row numbers in the vector
+train_sample<-sample(seq_len(nrow(auto1)),size=size)
+#saving all the training records into train sampleset
+train1<-auto1[train_sample,]
+#saving all the test records into test sampleset
+test1<-auto1[-train_sample,]
+cat("\nSize of Training Data:",nrow(train1),"\n")
+cat("Size of Test Data:",nrow(test1),"\n")
+```
+
+**i) Provide a summary of your model.**
+• What is the best model using BIC as the model selection criteria? Report the model name and BIC. (See mclustModelNames)
+• Report the true positive rate, true negative rate, training error, and test error. You can reuse the function written in Homework # 3.
+
+  I have used the predictors cylinders,horsepower,weight,displacement to fit my discriminant model using *MclustDA()* function and Training data. 8 models were fit with different cluster groups ranging from G=1 to G=8.
+  
+```{r Code Chunk-3}
+set.seed(586)
+#Saving the predictor variables selected in homework 3 in a separate data frame
+x.dat<-train1[,c(2,3,4,5)]
+#Saving the response variable in a separate data frame
+class.dat<-train1[,1]
+# Fitting MclustDA model using the previously selected variables with G=1
+mod.DA.G1<-MclustDA(x.dat,class.dat,G=1)
+#cat("Summary of the Training model:\n")
+#summary(mod.DA.G1)
+#cat("Training Error:",(summary(mod.DA.G1)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G1)$bic,"\n")
+# Fitting MclustDA model using the previously selected variables with G=2
+mod.DA.G2<-MclustDA(x.dat,class.dat,G=2)
+#cat("Training Error:",(summary(mod.DA.G2)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G2)$bic,"\n")
+mod.DA.G3<-MclustDA(x.dat,class.dat,G=3)
+# Fitting MclustDA model using the previously selected variables with G=3
+#cat("Training Error:",(summary(mod.DA.G3)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G3)$bic,"\n")
+mod.DA.G4<-MclustDA(x.dat,class.dat,G=4)
+# Fitting MclustDA model using the previously selected variables with G=4
+#cat("Training Error:",(summary(mod.DA.G4)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G4)$bic,"\n")
+# Fitting MclustDA model using the previously selected variables with G=5
+mod.DA.G5<-MclustDA(x.dat,class.dat,G=5)
+#cat("Training Error:",(summary(mod.DA.G5)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G5)$bic,"\n")
+# Fitting MclustDA model using the previously selected variables with G=6
+mod.DA.G6<-MclustDA(x.dat,class.dat,G=6)
+#cat("Training Error:",(summary(mod.DA.G6)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G6)$bic,"\n")
+# Fitting MclustDA model using the previously selected variables with G=7
+mod.DA.G7<-MclustDA(x.dat,class.dat,G=7)
+#cat("Training Error:",(summary(mod.DA.G7)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G7)$bic,"\n")
+# Fitting MclustDA model using the previously selected variables with G=8
+mod.DA.G8<-MclustDA(x.dat,class.dat,G=8)
+#cat("Training Error:",(summary(mod.DA.G8)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G8)$bic,"\n")
+
+```
+
+  BIC of all the models is compared to find the best model.The mixture model with G=3 has a largest BIC compared to other models(-8945.465).
+  
+```{r Code Chunk-4}
+kable(cbind(G1.BIC=summary(mod.DA.G1)$bic,G2.BIC=summary(mod.DA.G2)$bic,G3.BIC=summary(mod.DA.G3)$bic,G4.BIC=summary(mod.DA.G4)$bic,G5.BIC=summary(mod.DA.G5)$bic,G6.BIC=summary(mod.DA.G6)$bic,G7.BIC=summary(mod.DA.G7)$bic,G8.BIC=summary(mod.DA.G8)$bic),caption="Comparision of BIC for different number of Clusters")
+
+kable(cbind(G1.Error=summary(mod.DA.G1)$err,G2.Error=summary(mod.DA.G2)$err,G3.Error=summary(mod.DA.G3)$err,G4.Error=summary(mod.DA.G4)$err,G5.Error=summary(mod.DA.G5)$err,G6.Error=summary(mod.DA.G6)$err,G7.Error=summary(mod.DA.G7)$err,G8.Error=summary(mod.DA.G8)$err),caption="Comparision of Training Error for different number of Clusters")
+
+```
+ The model with the best BIC is EEV model.It is of ellipsoidal,equal volume and equal shape.
+ 
+```{r Code Chunk-5}
+
+Model.train<-kable(cbind("Class"=summary(mod.DA.G3)$classes,
+                         "Model"=summary(mod.DA.G3)$modelName,
+                         "Group"=summary(mod.DA.G3)$G),caption="Model and Group")
+Model.train
+
+cat("\nMixture Model with best BIC is EEV:ellipsoidal,equal volume and equal shape")
+
+#Summary of model
+kable(cbind(n=summary(mod.DA.G3)$n,Proportion=round(summary(mod.DA.G3)$prop,2),'Brier Score'=summary(mod.DA.G3)$brier,loglike=summary(mod.DA.G3)$loglik),caption='Other Metrics of model',digits=3)
+```
+  However, when a mixture model is fit using G=1:9 groups ($mod.DA.G19<-MclustDA(x.dat,class.dat,G=1:9)$) the BIC is -8871.28 which larger than fitting the models individually. Though the BIC with 3 clusters groups is close to this model(-8945.465) the training error rate of model with 1:9 groups is lower,6.5% compared to 8.0%.
+  
+```{r Code Chunk-6}
+mod.DA.G19<-MclustDA(x.dat,class.dat,G=1:9)
+#cat("Summary of the Training model:\n")
+#summary(mod.DA.G1)
+cat("Training Error of model where G=1:9:",(summary(mod.DA.G19)$err)*100,"%\n")
+cat("BIC of the Model where G=1:9:",summary(mod.DA.G19)$bic,"\n")
+Model.train1<-kable(cbind("Class"=summary(mod.DA.G19)$classes,
+                         "Model"=summary(mod.DA.G19)$modelName,
+                         "Group"=summary(mod.DA.G19)$G),caption="Model and Group")
+Model.train1
+
+cat("\nMixture Model with best BIC is EEV:ellipsoidal,equal volume and equal shape")
+
+#Summary of model
+kable(cbind(n=summary(mod.DA.G19)$n,Proportion=round(summary(mod.DA.G19)$prop,2),'Brier Score'=summary(mod.DA.G19)$brier,loglike=summary(mod.DA.G19)$loglik),caption='Other Metrics of model',digits=3)
+```
+
+  In both cases the best model selected is EEV (EEV-ellipsoidal,equal volume and equal shape).
+  
+  Below are the metrics for model with 3 clusters,
+  
+\begin{verbatim}
+mod.DA.G3<-MclustDA(x.dat,class.dat,G=3)
+\end{verbatim}
+  
+```{r Code Chunk-7}
+#Metrices for training Data using model with 3 clusters
+mclust.sum1 <- summary(mod.DA.G3,newdata = x.dat,newclass = class.dat)
+TP1 <- mclust.sum1$tab.newdata[2,2]
+TN1 <- mclust.sum1$tab.newdata[1,1]
+FP1 <- mclust.sum1$tab.newdata[1,2]
+FN1 <- mclust.sum1$tab.newdata[2,1]
+
+TPR1 <- TP1/(TP1+FN1)
+TNR1 <- TN1/(TN1+FP1)
+Training_Error <- (FP1+FN1)/(TP1+TN1+FP1+FN1)
+
+kable(data.frame(Metrics=c('TPR','TNR','Training Error'),Values=c(TPR1,TNR1,Training_Error)),digits=3,caption='Metrics for Training Data')
+
+#Making predictions on test data and reporting the related metrices
+prediction1<-predict.MclustDA(mod.DA.G3,newdata=test1[,c(2,3,4,5)])$classification
+#misclassification function
+misclass.fun.SP <- function(predicted,actual){
+
+  TP <- sum(ifelse(actual == 1 & predicted == 1,1,0))
+  TN <- sum(ifelse(actual == 0 & predicted == 0,1,0))
+  FP <- sum(ifelse(actual == 0 & predicted == 1,1,0))
+  FN <- sum(ifelse(actual == 1 & predicted == 0,1,0))
+  
+  misclassfication.rate <- ((FP+FN)/(TP+TN+FP+FN))
+  sensitivity <- TP/(TP+FN)
+  specificity <- TN/(TN+FP)
+  
+  Info.Table<- c('TPR'=sensitivity,
+                 'TNR'=specificity,'Test Error'=misclassfication.rate)
+  return(Info.Table)
+}
+#calculating metrices
+kable(misclass.fun.SP(prediction1,test1[,1]),digits=3,
+      caption="Metrics for Test Data",col.names="Values")
+
+```
+ 
+ Below are the metrics for mixture model with 1 to 9 clusters,
+  
+\begin{verbatim}
+mod.DA.G19<-MclustDA(x.dat,class.dat,G=1:9)
+\end{verbatim}
+
+```{r Code Chunk-8}
+#Metrics for training Data using model with 1 to 9 clusters
+mclust.sum2 <- summary(mod.DA.G19,newdata = x.dat,newclass = class.dat)
+TP2 <- mclust.sum2$tab.newdata[2,2]
+TN2 <- mclust.sum2$tab.newdata[1,1]
+FP2 <- mclust.sum2$tab.newdata[1,2]
+FN2 <- mclust.sum2$tab.newdata[2,1]
+
+TPR2 <- TP2/(TP2+FN2)
+TNR2 <- TN2/(TN2+FP2)
+Training_Error2 <- (FP2+FN2)/(TP2+TN2+FP2+FN2)
+
+kable(data.frame(Metrics=c('TPR','TNR','Training Error'),Values=c(TPR2,TNR2,Training_Error2)),digits=3,caption='Metrics for Training Data')
+
+#Making predictions on test data and reporting the related metrices
+prediction2<-predict.MclustDA(mod.DA.G19,newdata=test1[,c(2,3,4,5)])$classification
+#calculating metrics
+auto.mclustDA<-(misclass.fun.SP(prediction2,test1[,1]))
+kable(misclass.fun.SP(prediction2,test1[,1]),digits=3,
+      caption="Metrices for Test Data",col.names="Values")
+```
+
+  The mixture model with G=1:9, has a lower training error of 6.6% and test error of 8.5% compared to model with G=3, where training error of 8.0% and test error of 10.2%.
+
+
+
+**ii) Specify modelType = "EDDA" and run MclustDA again. Provide a summary of your model.**
+• What is the best model using BIC as the model selection criteria? Report the model name and BIC.
+• Report the true positive rate, true negative rate, training error, and test error.
+
+ I have used the same predictors cylinders,horsepower,weight,displacement to fit my discriminant model using *MclustDA()* function with modelType = "EDDA (same covarient matrix used for all clusters) and Training data.
+ 
+\begin{verbatim}
+mod.DA.Edda<-MclustDA(x.dat,class.dat,modelType = "EDDA")
+\end{verbatim}
+
+```{r Code Chunk-9}
+mod.DA.Edda<-MclustDA(x.dat,class.dat,modelType = "EDDA")
+#cat("Summary of the Training model:\n")
+#summary(mod.DA.Edda)
+cat("Training Error of EDDA model:",(summary(mod.DA.Edda)$err)*100,"%\n")
+cat("BIC of the EDDA Model :",summary(mod.DA.Edda)$bic,"\n")
+cat("EDDA Model with best BIC is VEV: ellipsoidal,equal shape\n")
+Model.train2<-kable(cbind("Class"=summary(mod.DA.Edda)$classes,
+                         "Model"=summary(mod.DA.Edda)$modelName,
+                         "Group"=summary(mod.DA.Edda)$G),caption="Model and Group")
+Model.train2
+#Summary of model
+kable(cbind(n=summary(mod.DA.Edda)$n,Proportion=round(summary(mod.DA.Edda)$prop,2),'Brier Score'=summary(mod.DA.Edda)$brier,loglike=summary(mod.DA.Edda)$loglik),caption='Other Metrics of EDDA model',digits=3)
+```
+
+```{r Code Chunk-10}
+#Metrics for training Data using model with 3 clusters
+mclust.sum3 <- summary(mod.DA.Edda,newdata = x.dat,newclass = class.dat)
+TP3 <- mclust.sum3$tab.newdata[2,2]
+TN3 <- mclust.sum3$tab.newdata[1,1]
+FP3 <- mclust.sum3$tab.newdata[1,2]
+FN3 <- mclust.sum3$tab.newdata[2,1]
+
+TPR3 <- TP3/(TP3+FN3)
+TNR3 <- TN3/(TN3+FP3)
+Training_Error3<- (FP3+FN3)/(TP3+TN3+FP3+FN3)
+
+kable(data.frame(Metrics=c('TPR','TNR','Training Error'),Values=c(TPR3,TNR3,Training_Error3)),digits=3,caption='Metrics for Training Data(EDDA)')
+
+#Making predictions on test data and reporting the related metrics
+prediction3<-predict.MclustDA(mod.DA.Edda,newdata=test1[,c(2,3,4,5)])$classification
+
+#calculating metrics
+auto.mclust.EDDA<-(misclass.fun.SP(prediction3,test1[,1]))
+kable(misclass.fun.SP(prediction3,test1[,1]),digits=3,
+      caption="Metrices for Test Data(EDDA)",col.names="Values")
+```
+ 
+  EDDA Model has a VEV, ellipsoidal,equal shape. The mixture model has a training error of 10.6% and test error of 11.0%.
+
+**iii)Compare the results with Homework #3 & 4. Which method performed the best? Justify your answer. Present your results in a well formatted table; include the previous methods and their corresponding rates.**
+
+  A Logistic regression model is fit for training data using the variables cylinders,displacement,horsepower,weight as predictors and mpg01 variable as response variable.
+
+\begin{verbatim}
+reg.mod3<-glm(mpg01~cylinders+displacement+horsepower+weight,
+          data=train1, family=binomial)
+\end{verbatim}
+
+```{r Code Chunk-15}
+#Fitting Logistic regression model with Lag2
+reg.mod3<-glm(mpg01~cylinders+displacement+horsepower+weight,
+              data=train1, family=binomial)
+#Summary of the model
+#summary(reg.mod3)
+```
+
+```{r Code Chunk-16}
+prob.mod3<- predict(reg.mod3,test1,type="response")
+
+#Creating a vector with of length of the response variable from test dataset
+pred.mod3<-rep(0,length(prob.mod3))
+
+#For all the probabilities greater than 0.5 the Down element is converted to UP 
+pred.mod3[prob.mod3>0.5]<-"1"
+
+#Confusion Matrix
+#table(pred.mod3,test1$mpg01)
+
+auto.glm.res <- misclass.fun.SP(pred.mod3,test1$mpg01)
+#kable(data.frame(Metrics=auto.glm.res),digits=3,caption = 'Results of Logistic Regression')
+```
+
+Using the same predictors and response variable as before a LDA model is fit
+
+\begin{verbatim}
+auto.lda <- lda(mpg01~cylinders+displacement+horsepower+weight,data=train1)
+\end{verbatim}
+
+```{r Code Chunk-17}
+auto.lda <- lda(mpg01~cylinders+displacement+horsepower+weight,data=train1)
+auto.pred_lda <- predict(auto.lda,test1)
+auto.test <- cbind(test1$mpg01,pred_lda=as.numeric(auto.pred_lda$class)-1)
+#table(test1$mpg01,as.numeric(auto.pred_lda$class)-1)
+auto.lda.res <- misclass.fun.SP(as.numeric(auto.pred_lda$class)-1,test1$mpg01)
+#kable(data.frame(Metrics=auto.lda.res),digits=3,caption = 'Results of LDA')
+```
+
+Using the same predictors and response variable as before a QDA model is fit.
+
+\begin{verbatim}
+auto.qda <- qda(mpg01~cylinders+displacement+horsepower+weight,data=train1)
+\end{verbatim}
+
+```{r Code Chunk-18}
+auto.qda <- qda(mpg01~cylinders+displacement+horsepower+weight,data=train1)
+auto.pred_qda <- predict(auto.qda,test1)
+auto.test.qda<- cbind(test1$mpg01,pred_qda=as.numeric(auto.pred_qda$class)-1)
+#table(test1$mpg01,as.numeric(auto.pred_lda$class)-1)
+auto.qda.res <- misclass.fun.SP(as.numeric(auto.pred_qda$class)-1,test1$mpg01)
+#kable(data.frame(Metrics=auto.qda.res),digits=3,caption = 'Results of QDA')
+```
+
+Using the same predictors and response variable as before a knn model is fit.The graph shows the misclassification, sensitivity, and specificity for k values from 1 to 100 were investigated and k value of 2 is picked for the analysis beacuse of lower misclassification rate and a reasonable sensitivity and specificity.
+
+```{r Code Chunk-19}
+set.seed(42)
+auto.train_knn <- data.frame(train1$weight,train1$displacement,train1$horsepower,train1$cylinders)
+auto.test_knn <- data.frame(test1$weight,test1$displacement,test1$horsepower,test1$cylinders)
+auto.cl_knn <- as.factor(train1$mpg01)
+auto_knn.dat <-data.frame(K=numeric(),Misclassification=numeric(),Sensitivity=numeric(),Specificity=numeric())
+
+for(k in 1:100){
+  temp_knn <- knn(auto.train_knn,auto.test_knn,auto.cl_knn,k=k)
+  temp_test <- cbind(train1$mpg01,as.numeric(temp_knn)-1)
+  temp_sum <- misclass.fun.SP(temp_test[,2],temp_test[,1])
+  auto_knn.dat[k,1] <- k
+  auto_knn.dat[k,2] <- as.numeric(temp_sum[1])
+  auto_knn.dat[k,3] <- as.numeric(temp_sum[2])
+  auto_knn.dat[k,4] <- as.numeric(temp_sum[3])
+}
+
+#ggplot(data=auto_knn.dat, aes(K)) +
+ # labs(title="Summary of Metrics per #K",color='Metric',x='K',y='Values') +
+#  geom_line(aes(y = Misclassification, color = "Misclassification")) + 
+ # geom_line(aes(y = Sensitivity, color = "Sensitivity")) +
+ # geom_line(aes(y = Specificity, color = "Specificity")) + 
+ # geom_vline(xintercept = 2, linetype="dotted", color = 'black')
+```
+
+```{r Code Chunk-20}
+auto_knn_res1 <- data.frame(Metrics=c('TPR','TNR','Test Error'),knn=c(auto_knn.dat[2,3],auto_knn.dat[2,4],auto_knn.dat[2,2]))
+#kable(auto_knn_res1,digits=3,caption='Metrics for KNN Model Where K=2')
+```
+
+Using the same predictors and response variable MclustDA and MclustDA_Edda models were fit (Question 2.i,2.ii)
+
+Below is the table showing the comparative metrics from all the models on Auto data
+
+```{r Code Chunk-21}
+kable(cbind(GLM=auto.glm.res,LDA=auto.lda.res,QDA=(auto.qda.res),KNN=(auto_knn_res1[2]),MclustDA=(auto.mclustDA),Mclust_EDDA=(auto.mclust.EDDA)),caption="Comparision Metrics of Auto Data",digits=3)
+```
+  From the comparative results it is clear that MclustDA model yield better results with lower misclassification rate of 8.5%,
+high Sensitivity(92.3%)and high specificity(90.6%).
+
+**iv) From the original model variables, construct a new set of variables, fit a model using MclustDA and repeat i-iii. Hint: new variables may be interactions, polynomials, and/or splines. Do these new variables give an improvement in error rates compared to previous models? Explain how the new variables were constructed**
+
+  New polynomial variables of all the predictors and few interaction terms were added to the original dataset. The data is divided into Train and test set by 70:30 split using the same seed (easy to compare results from 2 different models on same set of test and train records) used for initial analysis.This data is used to fit Model1. Due to few variables a high p value was observed for all terms.Model2 was fit by removing variable "name" and related polynomial terms. Model2 also resulted in high p values of all terms. 
+  Another model is fit removing all the polynomial terms
+  
+\begin{verbatim}
+auto.glm.new2 <- glm(mpg01~.,data=train3[,c(1:8,21:24)],family='binomial')
+\end{verbatim}
+
+  This model resulted in few terms that are highly correlated like "acceleration","weight","year" and an interaction term between "weight" &"acceleration". A new model is fit with these variables and is used for the analysis.
+  
+\begin{verbatim}
+auto.glm.new3 <- glm(mpg01~weight+acceleration+year+int_3,data=train3,family='binomial')
+\end{verbatim}
+
+  The same variables are used to fit logistic regression model, LDA model, QDA model,KNN Model(a k of 9 is used for analysis.A knn classification is performed with a k value of 1 to 100 and at k=9 the missclassification rate is at the lowest with reasonable sensitivity and specificity),MclustDA model and Mclust_EDDA model.
+  
+
+```{r Code Chunk-22}
+auto2<-auto1
+
+auto2 <- data.frame(auto2[,c(1:8)],
+                    displacement_2=auto2$displacement^2,displacement_3=auto2$displacement^3,
+                             cylinders_2=auto2$cylinders^2,cylinders_3=auto2$cylinders^3,
+                             weight_2=auto2$weight^2,weight_2=auto2$weight^3,
+                             horsepower_2=auto2$horsepower^2,horsepower_3=auto2$horsepower^3,
+                             acceleration_2=auto2$acceleration^2,acceleration_3=auto2$acceleration^3,
+                    year_2=auto2$year^2,year_3=auto2$year^3,int_1=auto2$acceleration*auto2$displacement,int_2=auto2$cylinders*auto2$weight*auto2$horsepower,int_3=auto2$acceleration*auto2$weight,int_4=auto2$acceleration*auto2$horsepower)
+
+cat("Dimensions of New Auto dataset:",dim(auto2))
+                             
+```
+
+```{r Code Chunk-23}
+#selecting size of the train set
+size<-floor(0.70*nrow(auto2))
+#setting seed to obtain same results each time
+set.seed(274)
+#Randomly sampling the rows of dataset of specified size and saving the row numbers in the vector
+train_sample<-sample(seq_len(nrow(auto1)),size=size)
+#saving all the training records into train sampleset
+train3<-auto2[train_sample,]
+#saving all the test records into test sampleset
+test3<-auto2[-train_sample,]
+cat("\nSize of New Training Data:",nrow(train3),"\n")
+cat("Size of New Test Data:",nrow(test3),"\n")
+```
+
+```{r Code Chunk-24}
+auto.glm.new1 <- glm(mpg01~.,data=train3,family='binomial')
+#summary(auto.glm.new1)
+auto.glm.new2 <- glm(mpg01~.,data=train3[,c(1:8,21:24)],family='binomial')
+#summary(auto.glm.new2)
+auto.glm.new3 <- glm(mpg01~weight+acceleration+year+int_3,data=train3,family='binomial')
+#summary(auto.glm.new3)
+
+prob.mod5<- predict(auto.glm.new3,test3,type="response")
+
+#Creating a vector with of length of the response variable from test dataset
+pred.mod5<-rep(0,length(prob.mod5))
+
+#For all the probabilities greater than 0.5 the Down element is converted to UP 
+pred.mod5[prob.mod5>0.5]<-"1"
+
+#Confusion Matrix
+#table(pred.mod3,test1$mpg01)
+
+auto.glm.res.new1 <- misclass.fun.SP(pred.mod5,test3$mpg01)
+#kable(data.frame(Metrics=auto.glm.res.new1),digits=3,caption = 'Results of Logistic Regression')
+
+```
+
+```{r Code Chunk-25}
+auto.lda1 <- lda(mpg01~weight+acceleration+year+int_3,data=train3)
+auto.pred_lda1 <- predict(auto.lda1,test3)
+auto.test1 <- cbind(test3$mpg01,pred_lda1=as.numeric(auto.pred_lda1$class)-1)
+#table(test1$mpg01,as.numeric(auto.pred_lda$class)-1)
+auto.lda.res1 <- misclass.fun.SP(as.numeric(auto.pred_lda1$class)-1,test3$mpg01)
+#kable(data.frame(Metrics=auto.lda.res1),digits=3,caption = 'Results of LDA')
+```
+```{r Code Chunk-26}
+auto.qda1 <- qda(mpg01~weight+acceleration+year+int_3,data=train3)
+auto.pred_qda1 <- predict(auto.qda1,test3)
+auto.test2 <- cbind(test3$mpg01,pred_lda2=as.numeric(auto.pred_qda1$class)-1)
+#table(test1$mpg01,as.numeric(auto.pred_lda$class)-1)
+auto.qda.res1 <- misclass.fun.SP(as.numeric(auto.pred_qda1$class)-1,test3$mpg01)
+#kable(data.frame(Metrics=auto.qda.res1),digits=3,caption = 'Results of QDA')
+
+```
+```{r Code Chunk-27}
+set.seed(42)
+auto.train_knn1 <-data.frame(train3$weight,train3$acceleration,train3$year,train3$int_3)
+auto.test_knn1 <-data.frame(test3$weight,test3$acceleration,test3$year,test3$int_3)
+auto.cl_knn1 <- as.factor(train3$mpg01)
+auto_knn.dat1 <-data.frame(K=numeric(),Misclassification=numeric(),Sensitivity=numeric(),Specificity=numeric())
+
+for(k in 1:100){
+  temp_knn1 <- knn(auto.train_knn1,auto.test_knn1,auto.cl_knn1,k=k)
+  temp_test1 <- cbind(train3$mpg01,as.numeric(temp_knn1)-1)
+  temp_sum1 <- misclass.fun.SP(temp_test1[,2],temp_test1[,1])
+  auto_knn.dat1[k,1] <- k
+  auto_knn.dat1[k,2] <- as.numeric(temp_sum1[1])
+  auto_knn.dat1[k,3] <- as.numeric(temp_sum1[2])
+  auto_knn.dat1[k,4] <- as.numeric(temp_sum1[3])
+}
+
+#ggplot(data=auto_knn.dat1, aes(K)) +
+ # labs(title="Summary of Metrics per #K",color='Metric',x='K',y='Values') +
+ #geom_line(aes(y = Misclassification, color = "Misclassification")) + 
+ #geom_line(aes(y = Sensitivity, color = "Sensitivity")) +
+ # geom_line(aes(y = Specificity, color = "Specificity")) + 
+ # geom_vline(xintercept = 9, linetype="dotted", color = 'black')
+```
+
+```{r Code Chunk-28}
+auto_knn_res3 <- data.frame(Metrics=c('TPR','TNR','Test Error'),knn=c(auto_knn.dat1[9,3],auto_knn.dat1[9,4],auto_knn.dat1[9,2]))
+#kable(auto_knn_res3,digits=3,caption='Metrics for KNN Model Where K=9')
+```
+
+```{r Code Chunk-29}
+set.seed(586)
+#Saving the predictor variables selected in homework 3 in a separate data frame
+x.dat1<-train3[,c(5:7,23)]
+#Saving the response variable in a separate data frame
+class.dat1<-train3[,1]
+# Fitting MclustDA model using the previously selected variables with G=1
+mod.DA.G11<-MclustDA(x.dat1,class.dat1,G=1)
+#cat("Summary of the Training model:\n")
+#summary(mod.DA.G1)
+#cat("Training Error:",(summary(mod.DA.G1)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G1)$bic,"\n")
+# Fitting MclustDA model using the previously selected variables with G=2
+mod.DA.G22<-MclustDA(x.dat1,class.dat1,G=2)
+#cat("Training Error:",(summary(mod.DA.G2)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G2)$bic,"\n")
+mod.DA.G33<-MclustDA(x.dat1,class.dat1,G=3)
+# Fitting MclustDA model using the previously selected variables with G=3
+#cat("Training Error:",(summary(mod.DA.G3)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G3)$bic,"\n")
+mod.DA.G44<-MclustDA(x.dat1,class.dat1,G=4)
+# Fitting MclustDA model using the previously selected variables with G=4
+#cat("Training Error:",(summary(mod.DA.G4)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G4)$bic,"\n")
+# Fitting MclustDA model using the previously selected variables with G=5
+mod.DA.G55<-MclustDA(x.dat1,class.dat1,G=5)
+#cat("Training Error:",(summary(mod.DA.G5)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G5)$bic,"\n")
+# Fitting MclustDA model using the previously selected variables with G=6
+mod.DA.G66<-MclustDA(x.dat1,class.dat1,G=6)
+#cat("Training Error:",(summary(mod.DA.G6)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G6)$bic,"\n")
+# Fitting MclustDA model using the previously selected variables with G=7
+mod.DA.G77<-MclustDA(x.dat1,class.dat1,G=7)
+#cat("Training Error:",(summary(mod.DA.G7)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G7)$bic,"\n")
+# Fitting MclustDA model using the previously selected variables with G=8
+mod.DA.G88<-MclustDA(x.dat1,class.dat1,G=8)
+#cat("Training Error:",(summary(mod.DA.G8)$err)*100,"%\n")
+#cat("BIC of the Model:",summary(mod.DA.G8)$bic,"\n")
+```
+
+  8 *MclustDA()* models were fit with different cluster groups ranging from G=1 to G=8 using the new training datset and previously selected variables. The tables below show the BIC and Training error rates of all these models.
+  
+  The mixture model with 6 clusters has a higher BIC(-11363.64) compared to other models and I have used this model for further analysis and predicting the Test error,Sensitivity and Specificity.
+  
+\begin{verbatim}
+mod.DA.G66<-MclustDA(x.dat1,class.dat1,G=6)
+\end{verbatim}
+
+
+```{r Code Chunk-30}
+kable(cbind(G1.BIC=summary(mod.DA.G11)$bic,G2.BIC=summary(mod.DA.G22)$bic,G3.BIC=summary(mod.DA.G33)$bic,G4.BIC=summary(mod.DA.G44)$bic,G5.BIC=summary(mod.DA.G55)$bic,G6.BIC=summary(mod.DA.G66)$bic,G7.BIC=summary(mod.DA.G77)$bic,G8.BIC=summary(mod.DA.G88)$bic),caption="Comparision of BIC for different number of Clusters")
+
+kable(cbind(G1.Error=summary(mod.DA.G11)$err,G2.Error=summary(mod.DA.G22)$err,G3.Error=summary(mod.DA.G33)$err,G4.Error=summary(mod.DA.G44)$err,G5.Error=summary(mod.DA.G55)$err,G6.Error=summary(mod.DA.G66)$err,G7.Error=summary(mod.DA.G77)$err,G8.Error=summary(mod.DA.G88)$err),caption="Comparision of Training Error for different number of Clusters")
+
+```
+```{r Code Chunk-31}
+Model.train1<-kable(cbind("Class"=summary(mod.DA.G66)$classes,
+                         "Model"=summary(mod.DA.G66)$modelName,
+                         "Group"=summary(mod.DA.G66)$G),
+                    caption="Model and Group")
+Model.train1
+
+cat("\nMixture Model with best BIC is EEV:ellipsoidal,equal volume and equal shape for class 0\n\n and VEV:ellipsoidal equal shape for class 1")
+
+#Summary of model
+kable(cbind(n=summary(mod.DA.G66)$n,Proportion=round(summary(mod.DA.G66)$prop,2),'Brier Score'=summary(mod.DA.G66)$brier,loglike=summary(mod.DA.G66)$loglik),caption='Other Metrics of model',digits=3)
+```
+
+  Mixture Model with 6 clusters with best BIC is *EEV*:ellipsoidal,equal volume and equal shape for class '0'(mpg lower than median value) and *VEV*:ellipsoidal equal shape for class '1'(mpg higher than median value).
+  
+  Misclassification rate, specificity and sensitivity of the test data is calculated.
+
+```{r Code Chunk-32}
+#Metrices for training Data using model with 3 clusters
+mclust.sum11 <- summary(mod.DA.G66,newdata = x.dat1,newclass = class.dat1)
+TP11 <- mclust.sum11$tab.newdata[2,2]
+TN11 <- mclust.sum11$tab.newdata[1,1]
+FP11<- mclust.sum11$tab.newdata[1,2]
+FN11 <- mclust.sum11$tab.newdata[2,1]
+
+TPR11 <- TP11/(TP11+FN11)
+TNR11 <- TN11/(TN11+FP11)
+Training_Error5 <- (FP1+FN11)/(TP11+TN11+FP11+FN11)
+
+kable(data.frame(Metrics=c('TPR','TNR','Training Error'),Values=c(TPR11,TNR11,Training_Error5)),digits=3,caption='Metrics for Training Data')
+
+#Making predictions on test data and reporting the related metrices
+prediction11<-predict.MclustDA(mod.DA.G66,newdata=test3[,c(5:7,23)])$classification
+
+#calculating metrics
+auto.mclustDA1 <-(misclass.fun.SP(prediction11,test3[,1]))
+#kable(misclass.fun.SP(prediction11,test3[,1]),digits=3,
+      #caption="Metrices for Test Data",col.names="Values")
+```
+
+
+
+
+
+```{r Code Chunk-33}
+# model with 9 clusters(G=1:9)
+mod.DA.G199<-MclustDA(x.dat1,class.dat1,G=1:9)
+#cat("Summary of the Training model:\n")
+#summary(mod.DA.G199)
+#cat("Training Error of model where G=1:9:",(summary(mod.DA.G199)$err)*100,"%\n")
+#cat("BIC of the Model where G=1:9:",summary(mod.DA.G199)$bic,"\n")
+Model.train19<-kable(cbind("Class"=summary(mod.DA.G199)$classes,
+                         "Model"=summary(mod.DA.G199)$modelName,
+                         "Group"=summary(mod.DA.G199)$G),caption="Model and Group")
+#Model.train19
+
+#cat("\nMixture Model with best BIC is EEV:ellipsoidal,equal volume and equal shape for class 0 and VEV:ellipsoidal equal shape for class 1")
+
+#Summary of model
+#kable(cbind(n=summary(mod.DA.G199)$n,Proportion=round(summary(mod.DA.G199)$prop,2),'Brier Score'=summary(mod.DA.G199)$brier,loglike=summary(mod.DA.G199)$loglik),caption='Other Metrics of model',digits=3)
+
+#Metrics for training Data using model with 1 to 9 clusters
+mclust.sum22 <- summary(mod.DA.G199,newdata = x.dat1,newclass = class.dat1)
+TP22 <- mclust.sum22$tab.newdata[2,2]
+TN22<- mclust.sum22$tab.newdata[1,1]
+FP22 <- mclust.sum22$tab.newdata[1,2]
+FN22 <- mclust.sum22$tab.newdata[2,1]
+
+TPR22 <- TP22/(TP22+FN22)
+TNR22 <- TN22/(TN22+FP22)
+Training_Error22 <- (FP2+FN22)/(TP22+TN22+FP22+FN22)
+
+#kable(data.frame(Metrics=c('TPR','TNR','Training Error'),Values=c(TPR22,TNR22,Training_Error2)),digits=3,caption='Metrics for Training Data')
+
+#Making predictions on test data and reporting the related metrices
+prediction22<-predict.MclustDA(mod.DA.G199,newdata=test3[,c(5:7,23)])$classification
+#calculating metrics
+auto.mclustDA9<-(misclass.fun.SP(prediction22,test3[,1]))
+#kable(misclass.fun.SP(prediction22,test3[,1]),digits=3,
+     # caption="Metrices for Test Data",col.names="Values")
+```
+
+  A new MclustDA model is fit with modelType as EDDA.
+  
+\begin{verbatim}
+mod.DA.Edda1<-MclustDA(x.dat1,class.dat1,modelType = "EDDA")
+\end{verbatim}
+
+  EDDA Model with best BIC is *VVV*: ellipsoidal, varying volume, shape, and orientation.Other metrics were calculated and presented below.
+  
+```{r Code Chunk-34}
+
+mod.DA.Edda1<-MclustDA(x.dat1,class.dat1,modelType = "EDDA")
+#cat("Summary of the Training model:\n")
+#summary(mod.DA.Edda)
+cat("Training Error of EDDA model:",(summary(mod.DA.Edda1)$err)*100,"%\n")
+cat("BIC of the EDDA Model :",summary(mod.DA.Edda1)$bic,"\n")
+cat("EDDA Model with best BIC is VVV: ellipsoidal, varying volume, shape, and orientation\n")
+Model.train2<-kable(cbind("Class"=summary(mod.DA.Edda1)$classes,
+                         "Model"=summary(mod.DA.Edda1)$modelName,
+                         "Group"=summary(mod.DA.Edda1)$G),caption="Model and Group")
+Model.train2
+#Summary of model
+kable(cbind(n=summary(mod.DA.Edda1)$n,Proportion=round(summary(mod.DA.Edda1)$prop,2),'Brier Score'=summary(mod.DA.Edda1)$brier,loglike=summary(mod.DA.Edda1)$loglik),caption='Other Metrics of EDDA model',digits=3)
+```
+
+```{r Code Chunk-35}
+#Metrics for training Data using model with 3 clusters
+mclust.sum33 <- summary(mod.DA.Edda1,newdata = x.dat1,newclass = class.dat1)
+TP33 <- mclust.sum33$tab.newdata[2,2]
+TN33 <- mclust.sum33$tab.newdata[1,1]
+FP33 <- mclust.sum33$tab.newdata[1,2]
+FN33 <- mclust.sum33$tab.newdata[2,1]
+
+TPR33 <- TP33/(TP33+FN33)
+TNR33 <- TN33/(TN33+FP33)
+Training_Error33<- (FP33+FN33)/(TP33+TN33+FP33+FN33)
+
+kable(data.frame(Metrics=c('TPR','TNR','Training Error'),Values=c(TPR33,TNR33,Training_Error33)),digits=3,caption='Metrics for Training Data(EDDA)')
+
+#Making predictions on test data and reporting the related metrics
+prediction33<-predict.MclustDA(mod.DA.Edda1,newdata=test3[,c(5:7,23)])$classification
+
+#calculating metrics
+auto.mclust.EDDA1<-(misclass.fun.SP(prediction33,test3[,1]))
+kable(misclass.fun.SP(prediction33,test3[,1]),digits=3,
+      caption="Metrices for Test Data(EDDA)",col.names="Values")
+```
+
+  Below is the table showing the comparative metrics from all the models on Auto data with new set of variables.
+
+```{r Code Chunk-36}
+kable(cbind(GLM=auto.glm.res.new1,LDA=auto.lda.res1,QDA=(auto.qda.res1),KNN=(auto_knn_res3[2]),MclustDA=(auto.mclustDA1),Mclust_EDDA=(auto.mclust.EDDA1)),caption="Comparision Metrics of Auto Data",digits=3)
+```
+
+  All the models were compared with the previously generated models and below
+are my observations,
+
+- For Logistic regression model the new variables resulted in little lower test error, higher sensitivity and little lower specificity.
+- For LDA model the new variables resulted in same test error, little lower sensitivity and little higher specificity.
+- For QDA model the new variables resulted in same test error, higher sensitivity and little lower specificity.
+- For knn model the new variables resulted in lower test error, higher sensitivity and little lower specificity.
+- For MclustDA model the new variables resulted in significantly higher test error, lower sensitivity and lower specificity.
+- For MclustDA model with EDDA modeltype the new variables resulted in same test error,sensitivity and specificity.
+
+  In conclusion,comparing all the different models MclustDA model using the initial variables cylinders,weight,horsepower and displacement resulted in the better model with a lower test error of 8.5%, higher sensitivity of 92.3% and highr specificity of 90.6%.
+
+### REFERENCES
+
+- Stat 602 Lecture,Introduction to Classification,*Playing With MclustDA part2* by Dr.Saunders.
+
