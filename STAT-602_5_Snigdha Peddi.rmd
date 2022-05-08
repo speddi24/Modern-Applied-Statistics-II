@@ -1,0 +1,485 @@
+---
+title: "STAT 602 - Homework 5"
+author: "Snigdha Peddi in collaboration with John Herbert"
+output: pdf_document
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=F,warning=F,echo=F,fig_height=10,fig_width=7,cache = F)
+```
+
+# Document External Libraries
+
+* **ISLR** package for the homework data sets
+* **knitr** package used for *kable* function used to format tables
+* **dplyr** package for data formatting and cleaning
+* **MASS** package for LDA and QDA models
+* **mclust** package for Mclust models and graphs 
+* **class** package for KNN models
+
+```{r}
+# install.packages('ISLR')
+suppressWarnings(suppressMessages(library(ISLR)))
+# install.packages('knitr')
+suppressWarnings(suppressMessages(library(knitr)))
+# install.packages('ggplot2')
+suppressWarnings(suppressMessages(library(ggplot2)))
+# install.packages('GGally')
+suppressWarnings(suppressMessages(library(GGally)))
+# install.packages('gridExtra')
+suppressWarnings(suppressMessages(library(gridExtra)))
+# install.packages('dplyr')
+suppressWarnings(suppressMessages(library(dplyr)))
+# install.packages('MASS')
+suppressWarnings(suppressMessages(library(MASS)))
+# install.packages('mclust')
+suppressWarnings(suppressMessages(library(mclust)))
+# install.packages('class')
+suppressWarnings(suppressMessages(library(class)))
+```
+
+# Reusable Functions
+
+* The misclassification function created in homework 3 (*misclass.fun.JH*) will be reused for questions in this homework.
+
+```{r}    
+misclass.fun.JH <- function(prediction,actual,threshold=0.5){
+  prediction <- ifelse(prediction >= threshold,1,0)
+  
+  TP <- sum(ifelse(actual == 1 & prediction == 1,1,0))
+  TN <- sum(ifelse(actual == 0 & prediction == 0,1,0))
+  FP <- sum(ifelse(actual == 0 & prediction == 1,1,0))
+  FN <- sum(ifelse(actual == 1 & prediction == 0,1,0))
+  
+  mclass <- (FP+FN)/(TP+TN+FP+FN)
+  sens <- TP/(TP+FN)
+  spec <- TN/(TN+FP)
+  
+  metrics <- c('Misclassification'=mclass,'Sensitivity'=sens,'Specificity'=spec)
+  return(metrics)
+}
+```
+
+# Exercises
+
+## Question 1 (ISLR 4.7.6 pg 170)
+
+Suppose we collect data for a group of students in a statistics class with variables $X_1 =$ hours studied, $X_2 =$ undergrad GPA, and $Y =$ receive an A. We fit a logistic regression and produce estimated coefficient, $\hat{\beta}_0=-6$, $\hat{\beta}_1=0.05$, $\hat{\beta}_2=1$.
+
+### Question 1(a)
+
+Estimate the probability that a student who studies for 40 hours and has an undergrad GPA of 3.5 gets an A in the class.
+
+**Answer**
+
+```{r,echo=T}
+# Setting variables for the beta values for each each covariant 'x' and the intercept
+b_0 = -6
+b_1 = 0.05
+b_2 = 1
+# Setting variables for X values
+x_1 = 40
+x_2 = 3.5
+# Calculating the "x" in phat_x
+phat_x <- b_0+b_1*x_1+b_2*x_2
+# Plug phat_x into our probability function to derive an answer
+phat <- exp(phat_x)/(1+exp(phat_x))
+cat('Probability that this student will get an A is',round(phat*100,2),'%')
+```
+
+In formulaic terms:
+
+$$\hat{p}(X) = \frac{e^{\hat{\beta}_0+\hat{\beta}_1x_1+\hat{\beta}_2x_2}}{1+e^{\hat{\beta}_0+\hat{\beta}_1x_1+\hat{\beta}_2x_2}} $$
+
+Plugging in values to the variables:
+
+$$\hat{p}(X)=\frac{e^{-6+0.05*40+1*3.5}}{1+e^{-6+0.05*40+1*3.5}} $$
+
+Simplified:
+
+$$\hat{p}(X)=\frac{e^{-0.5}}{1+e^{-0.5}} $$
+
+Therefore:
+
+$$\hat{p}(X)=0.3775407$$
+
+### Question 1(b)
+
+How many hours would the student in part (a) need to study to have a 50% chance of getting an A in the class?
+
+**Answer**
+
+Solve for $x$:
+
+$$0.5=\frac{e^{-6+0.05x+3.5}}{1+e^{-6+0.05x+3.5}}$$
+
+Simplify the exponent:
+
+$$0.5=\frac{e^{-2.5+0.05x}}{1+e^{-2.5+0.05x}}$$
+
+Multiply each side by the demoninator:
+
+$$0.5(1+e^{-2.5+0.05x})=e^{-2.5+0.05x}$$
+
+Simplify the left side of the equation:
+
+$$0.5+0.5(e^{-2.5+0.05x})=e^{-2.5+0.05x}$$
+
+Subtract each side by $0.5(e^{-2.5+0.05x})$:
+
+$$0.5= e^{-2.5+0.05x}-0.5e^{-2.5+0.05x}$$
+
+$$0.5=0.5e^{-2.5+0.05x}$$
+
+Multiplying each side by 2:
+
+$$1=e^{-2.5+0.05x}$$
+
+$$0=-2.5+0.05x $$
+
+Take the natural log of each side:
+
+$$ln(1)=ln(e^{-2.5+0.05x}) $$
+
+$$0=-2.5+0.05x$$
+
+$$x=50$$
+
+It would take this student 50 hours of studying to have a 50% chance of recieving a 4.0 GPA.
+
+\footnotesize Source: [An Introduction to Statistical Learning](https://github.com/LamaHamadeh/DS-ML-Books/blob/master/An%20Introduction%20to%20Statistical%20Learning%20-%20Gareth%20James.pdf)
+
+## Question 2
+
+Continue from Homework \#3 \& 4 using the **Weekly** dataset from 4.7.10). Construct a model (using the predictors chosen for previous homework) and fit this model using the *MclustDA* function from the **mclust** library. 
+
+### Question 2(i) Part I
+
+Provide a summary of your model.
+
+**Answer**
+
+Using the all the *Lag* variables as was done in Homework 3 & 4 as the predictors, and *Direction* as the target with the *MclustDA* function to create the model. In addition, I set the # of Groups to 9. In order to calculate the training and test errors, I partitioned the data set into train/test with the same method as prior homeworks. The below summaires are just on the training set.
+
+```{r}
+weekly.dat <- ISLR::Weekly
+weekly.train <- weekly.dat %>% filter(between(Year,1990,2008))
+weekly.test <-  weekly.dat %>% filter(between(Year,2009,2010))
+mclust.mod <- MclustDA(weekly.train[,2:6],class=weekly.train[,9],
+                       G=1:9)
+
+kable(as.data.frame(t(data.frame(n=summary(mclust.mod)$n,Proportion=round(summary(mclust.mod)$prop,2),Model=summary(mclust.mod)$modelName,G=summary(mclust.mod)$G))),caption='Summary of Mclust Model (Train)')
+kable(data.frame(Metrics=c('Class Error','Brier Score','Log Like','BIC'),Values=c(summary(mclust.mod)$err,summary(mclust.mod)$brier,summary(mclust.mod)$loglik,BIC=summary(mclust.mod)$bic)),digits=3,caption='Metric Summary of Mclust Model (Train)')
+
+mclust.cf <- summary(mclust.mod)$tab
+colnames(mclust.cf) <- c('Pred Down','Pred Up')
+rownames(mclust.cf) <- c('Act Down','Act Up')
+kable(mclust.cf, caption='Weekly MclustDA Confusion Matrix')
+```
+
+### Question 2(i) Part II
+
+What is the best model selected by BIC? Report the Model Name and the BIC. (See [mclustModelNames](https://www.rdocumentation.org/packages/mclust/versions/5.4/topics/mclustModelNames))
+
+**Answer**
+
+Using the *Mclust* function, I examined the different BIC scores of groupings set betwen 1-9 for both the Up and Down class.
+
+```{r}
+weekly.train.up <- weekly.train %>% filter(Direction == 'Up')
+
+weekly.mod.up <- Mclust(weekly.train.up[,2:6],class=weekly.train.up[,9],
+                       G=1:9)
+
+weekly.train.down <- weekly.train %>% filter(Direction == 'Down')
+
+weekly.mod.down <- Mclust(weekly.train.down[,2:6],class=weekly.train.down[,9],
+                       G=1:9)
+
+kable(cbind(Group=c(1:3),Proportion=round(summary(weekly.mod.up)$pro,3)),caption='Clustering Table Proportions for Up Class')
+kable(data.frame(Metrics=c('Model','Log Like','n','df','BIC','ICL'),Values=c(summary(weekly.mod.up)$modelName,round(summary(weekly.mod.up)$loglik,2),summary(weekly.mod.up)$n,summary(weekly.mod.up)$d,round(summary(weekly.mod.up)$bic,2),round(summary(weekly.mod.up)$icl,2))),caption='Model Metrics for Up Class')
+plot(weekly.mod.up,what='BIC')
+
+kable(cbind(Group=c(1:3),Proportion=round(summary(weekly.mod.down)$pro,3)),caption='Clustering Table Proportions for Down Class')
+kable(data.frame(Metrics=c('Model','Log Like','n','df','BIC','ICL'),Values=c(summary(weekly.mod.down)$modelName,round(summary(weekly.mod.down)$loglik,2),summary(weekly.mod.down)$n,summary(weekly.mod.down)$d,round(summary(weekly.mod.down)$bic,2),round(summary(weekly.mod.down)$icl,2))),digits=0,caption='Model Metrics for Down Class')
+plot(weekly.mod.down,what='BIC')
+```
+
+According to the tables and graphs above, the *Up* class with the lowest BIC model has 2 groups with a spherical, varying volume model and a BIC of -11,672.89.
+
+For the *Down* class, the lowest BIC model has 3 groups with a spherical, varying volume model and a BIC of -9,466.46.
+
+This is displayed on the BIC plots with the VII model having the highest BIC for 2 and 3 components, respectfully.
+
+### Question 2(i) Part III
+
+Report the true positive rate, true negative rate, training error, and test error. You can reuse the function written in Homework \# 3.
+
+**Answer**
+
+Calculated the TP, TN, FP, and FN based of the confusion matrix in the mclust model.It was just built on the training data.
+
+```{r}
+TP <- summary(mclust.mod)$tab[2,2]
+TN <- summary(mclust.mod)$tab[1,1]
+FP <- summary(mclust.mod)$tab[1,2]
+FN <- summary(mclust.mod)$tab[2,1]
+
+TPR <- TP/(TP+FN)
+TNR <- TN/(TN+FP)
+Train_Error <- (FP+FN)/(TP+TN+FP+FN)
+
+kable(data.frame(Metrics=c('TPR','TNR','Training Error'),Values=c(TPR,TNR,Train_Error)),digits=3,caption='Metrics for Training Model')
+```
+
+Calculated the TP, TN, FP, and FN based of the confusion matrix in the mclust model. The summary of the model was updated with new data and class on the test data set. 
+
+```{r}
+mclust.sum2 <- summary(mclust.mod,newdata = weekly.test[,2:6],newclass = weekly.test[,9])
+TP2 <- mclust.sum2$tab.newdata[2,2]
+TN2 <- mclust.sum2$tab.newdata[1,1]
+FP2 <- mclust.sum2$tab.newdata[1,2]
+FN2 <- mclust.sum2$tab.newdata[2,1]
+
+TPR2 <- TP2/(TP2+FN2)
+TNR2 <- TN2/(TN2+FP2)
+Test_Error <- (FP2+FN2)/(TP2+TN2+FP2+FN2)
+
+kable(data.frame(Metrics=c('TPR','TNR','Test Error'),Values=c(TPR2,TNR2,Test_Error)),digits=3,caption='Metrics for Test Model')
+```
+
+### Question 2(ii) Part I
+
+Repeat the `MclustDA` analysis, but this time specify `modelType = "EDDA"`. Provide a summary of this model.
+
+**Answer**
+
+```{r}
+mclust.mod.edda <- MclustDA(weekly.train[,2:6],class=weekly.train[,9],
+                       G=1:9,modelType = 'EDDA')
+
+kable(as.data.frame(t(data.frame(n=summary(mclust.mod.edda)$n,Proportion=round(summary(mclust.mod.edda)$prop,2),Model=summary(mclust.mod.edda)$modelName,G=summary(mclust.mod.edda)$G))),caption='Summary of Mclust EDDA Model (Train)')
+kable(data.frame(Metrics=c('Class Error','Brier Score','Log Like','BIC'),Values=c(summary(mclust.mod.edda)$err,summary(mclust.mod.edda)$brier,summary(mclust.mod.edda)$loglik,BIC=summary(mclust.mod.edda)$bic)),digits=3,caption='Metric Summary of Mclust EDDA Model (Train)')
+
+mclust.edda.cf <- summary(mclust.mod.edda)$tab
+colnames(mclust.edda.cf) <- c('Pred Down','Pred Up')
+rownames(mclust.edda.cf) <- c('Act Down','Act Up')
+kable(mclust.edda.cf, caption='Weekly EDDA MclustDA Confusion Matrix')
+```
+
+### Question 2(ii) Part II
+
+What is the best model using BIC as the model selection criteria?
+
+**Answer**
+
+According EDDA model above, is EII or spherical, equal volume with one group based on a BIC of -22,128.107.
+
+### Question 2(ii) Part III
+
+Report the true positive rate, true negative rate, training error, and test error. You can reuse the function written in Homework \# 3.
+
+**Answer**
+
+I calculated the TP, TN, FP, and FN based of the confusion matrix in the EDDA mclust model. It was built on the training data.
+
+```{r}
+TP3 <- summary(mclust.mod.edda)$tab[2,2]
+TN3 <- summary(mclust.mod.edda)$tab[1,1]
+FP3 <- summary(mclust.mod.edda)$tab[1,2]
+FN3 <- summary(mclust.mod.edda)$tab[2,1]
+
+TPR3 <- TP3/(TP3+FN3)
+TNR3 <- TN3/(TN3+FP3)
+Train_Error3 <- (FP3+FN3)/(TP3+TN3+FP3+FN3)
+
+kable(data.frame(Metrics=c('TPR','TNR','Training Error'),Values=c(TPR3,TNR3,Train_Error3)),digits=3,caption='Metrics for Training EDDA Model')
+```
+
+Calculated the TP, TN, FP, and FN based of the confusion matrix in the EDDA mclust model. The summary of the model was updated with new data and class on the test data set. 
+
+```{r}
+mclust.sum4 <- summary(mclust.mod.edda,newdata = weekly.test[,2:6],newclass = weekly.test[,9])
+TP4 <- mclust.sum2$tab.newdata[2,2]
+TN4 <- mclust.sum2$tab.newdata[1,1]
+FP4 <- mclust.sum2$tab.newdata[1,2]
+FN4 <- mclust.sum2$tab.newdata[2,1]
+
+TPR4 <- TP4/(TP4+FN4)
+TNR4 <- TN4/(TN4+FP4)
+Test_Error4 <- (FP4+FN4)/(TP4+TN4+FP4+FN4)
+
+kable(data.frame(Metrics=c('TPR','TNR','Test Error'),Values=c(TPR4,TNR4,Test_Error4)),digits=3,caption='Metrics for Test EDDA Model')
+```
+
+### Question 2(iii)
+
+Compare the results with Homework \#3 \& 4. Which method performed the best? Justify your answer. *Present your results in a well formatted table; include the previous methods and their corresponding rates.*
+
+**Answer**
+
+Using formulas and code from Homework 4 with all Lag variables as predictors for each of the models, I summarized the Test Error, TPR, and TNR rates for each in a data frame.
+
+```{r}
+set.seed(42)
+weekly.train$Direction2 <- ifelse(weekly.train$Direction == "Up",1,0)
+weekly.test$Direction2 <- ifelse(weekly.test$Direction == "Up",1,0)
+
+weekly.glm <- glm(data=weekly.train,Direction2~Lag1+Lag2+Lag3+Lag4+Lag5,family='binomial')
+weekly.pred_glm <- predict(weekly.glm,weekly.test)
+weekly.pred_glm <- ifelse(weekly.pred_glm >=0.5,1,0)
+weekly.test <- cbind(weekly.test,pred_glm=weekly.pred_glm)
+weekly.glm.res <- misclass.fun.JH(weekly.test$pred_glm,weekly.test$Direction2)
+
+weekly.lda <- lda(Direction2~Lag1+Lag2+Lag3+Lag4+Lag5,data=weekly.train)
+weekly.pred_lda <- predict(weekly.lda,weekly.test)
+weekly.test <- cbind(weekly.test,pred_lda=as.numeric(weekly.pred_lda$class)-1)
+weekly.lda.res <- misclass.fun.JH(weekly.test$pred_lda,weekly.test$Direction2)
+
+weekly.qda <- qda(Direction2~Lag1+Lag2+Lag3+Lag4+Lag5,data=weekly.train)
+weekly.pred_qda <- predict(weekly.qda,weekly.test)
+weekly.test <- cbind(weekly.test,pred_qda=as.numeric(weekly.pred_qda$class)-1)
+weekly.qda.res <- misclass.fun.JH(weekly.test$pred_qda,weekly.test$Direction2)
+
+weekly.knn <- knn(data.frame(weekly.train$Lag1,weekly.train$Lag2,weekly.train$Lag3,weekly.train$Lag4,weekly.train$Lag5),data.frame(weekly.test$Lag1,weekly.test$Lag2,weekly.test$Lag3,weekly.test$Lag4,weekly.test$Lag5),as.factor(weekly.train$Direction2))
+weekly.test <- cbind(weekly.test,pred_knn=as.numeric(weekly.knn)-1)
+weekly.knn.res <- misclass.fun.JH(weekly.test$pred_knn,weekly.test$Direction2)
+
+metric.sum <- data.frame(Metrics=c('Test Error','Test TPR','Test TNR'),GLM=as.numeric(weekly.glm.res),LDA=as.numeric(weekly.lda.res),QDA=as.numeric(weekly.qda.res),KNN=as.numeric(weekly.knn.res),Mclust=c(Test_Error,TPR,TNR),Mclust_EDDA=c(Test_Error4,TPR4,TNR4))
+kable(metric.sum,digits=3,caption='Model Summaries for Weekly Data All Lag Variables')
+```
+
+According to the summary above, LDA, Mclust, and Mclust_EDDA have the same and lowest test error rate, however the Mclust_EDDA have a more evenly distributed TPR and TNR than the other models. However, the Mclust model may be the best fit since the loss on the TNR rate comapred to the EDDA model isn't much, but the gain on the TPR rate is faily high. 
+
+### Question 2(iv)
+    
+From the original model variables, construct a new set of variables, fit a model using `MclustDA` and repeat i-iii. *Hint: new variables may be interactions, polynomials, and/or splines.* Do these new variables give an improvement in error rates compared to previous models? Explain how the new variables were constructed.
+
+**Answer**
+
+Using the following variables to build the model based on Homework 4, which were chosen with all Lag variables, their interactions, squared and cubed. I used each of these variables as predictors in the new models and summazied the metrics in a data frame. 
+
+* Lag1
+* Lag2
+* Lag4
+* Lag1 Squared
+* Lag3 Squared
+* Lag5 Squared
+* Lag1:Lag3 Interaction
+* Lag1:Lag3:Lag4 Interaction
+* Lag2:Lag3:Lag4 Interaction
+* Lag2:Lag3:Lag5 Interaction
+
+I created a new data frame with the above variables and split the data into training and test data sets. These variables will be used for all the models in the previous question. In addition, I converted the *Direction* variable to to 1 for Up and 0 for Down for model simplicity.
+    
+```{r}
+weekly.dat2 <- data.frame(weekly.dat[,c(9,1,2,3,5)],Lag1_2=weekly.dat$Lag1^2,Lag3_2=weekly.dat$Lag3^2,Lag5_2=weekly.dat$Lag5^2,
+                        L1_L3=weekly.dat$Lag1*weekly.dat$Lag3,L1_L3_L4=weekly.dat$Lag1*weekly.dat$Lag3*weekly.dat$Lag4,
+                        L2_L3_L4=weekly.dat$Lag2*weekly.dat$Lag3*weekly.dat$Lag4,L2_L3_L5=weekly.dat$Lag2*weekly.dat$Lag3*
+                        weekly.dat$Lag5)
+weekly.train2 <- weekly.dat2 %>% filter(between(Year,1990,2008))
+weekly.test2 <-  weekly.dat2 %>% filter(between(Year,2009,2010))
+
+weekly.train2$Direction <- ifelse(weekly.train2$Direction == "Up",1,0)
+weekly.test2$Direction <- ifelse(weekly.test2$Direction == "Up",1,0)
+```
+
+```{r}
+set.seed(42)
+
+# GLM Model
+weekly.glm2 <- glm(Direction~.-Year,data=weekly.train2,family='binomial')
+weekly.pred_glm2 <- predict(weekly.glm2,weekly.test2)
+weekly.pred_glm2 <- ifelse(weekly.pred_glm2 >=0.5,1,0)
+weekly.test.glm2 <- cbind(weekly.test2,pred_glm=weekly.pred_glm2)
+weekly.glm.res2 <- misclass.fun.JH(weekly.test.glm2$pred_glm,weekly.test.glm2$Direction)
+
+# LDA Model
+weekly.lda2 <- lda(Direction~.-Year,data=weekly.train2)
+weekly.pred_lda2 <- predict(weekly.lda2,weekly.test2)
+weekly.test.lda2 <- cbind(weekly.test2,pred_lda=as.numeric(weekly.pred_lda2$class)-1)
+weekly.lda.res2 <- misclass.fun.JH(weekly.test.lda2$pred_lda,weekly.test.lda2$Direction)
+
+# QDA Model
+weekly.qda2 <- qda(Direction~.-Year,data=weekly.train2)
+weekly.pred_qda2 <- predict(weekly.qda2,weekly.test2)
+weekly.test.qda2 <- cbind(weekly.test2,pred_qda=as.numeric(weekly.pred_qda2$class)-1)
+weekly.qda.res2 <- misclass.fun.JH(weekly.test.qda2$pred_qda,weekly.test.qda2$Direction)
+
+# KNN Model
+weekly.knn2 <- knn(data.frame(weekly.train2[,3:12]),data.frame(weekly.test2[,3:12]),as.factor(weekly.train2$Direction))
+weekly.test.knn2 <- cbind(weekly.test2,pred_knn=as.numeric(weekly.knn2)-1)
+weekly.knn.res2 <- misclass.fun.JH(weekly.test.knn2$pred_knn,weekly.test.knn2$Direction)
+
+# MclustDA Model
+mclust.mod2 <- MclustDA(weekly.train2[,3:12],class=weekly.train2[,1],
+                       G=1:15)
+mclust.sum.DA2 <- summary(mclust.mod2,newdata = weekly.test2[,3:12],newclass = weekly.test2[,1])
+TP_DA2 <- mclust.sum.DA2$tab.newdata[2,2]
+TN_DA2 <- mclust.sum.DA2$tab.newdata[1,1]
+FP_DA2 <- mclust.sum.DA2$tab.newdata[1,2]
+FN_DA2 <- mclust.sum.DA2$tab.newdata[2,1]
+
+TPR_DA2 <- TP_DA2/(TP_DA2+FN_DA2)
+TNR_DA2 <- TN_DA2/(TN_DA2+FP_DA2)
+Test_Error_DA2 <- (FP_DA2+FN_DA2)/(TP_DA2+TN_DA2+FP_DA2+FN_DA2)
+
+#Mclust EDDA Model
+mclust.EDDA2 <- MclustDA(weekly.train2[,3:12],class=weekly.train2[,1],
+                       G=1:15,modelType = 'EDDA')
+mclust.sum.EDDA2 <- summary(mclust.EDDA2,newdata = weekly.test2[,3:12],newclass = weekly.test2[,1])
+TP_EDDA2 <- mclust.sum.EDDA2$tab.newdata[2,2]
+TN_EDDA2 <- mclust.sum.EDDA2$tab.newdata[1,1]
+FP_EDDA2 <- mclust.sum.EDDA2$tab.newdata[1,2]
+FN_EDDA2 <- mclust.sum.EDDA2$tab.newdata[2,1]
+
+TPR_EDDA2 <- TP_EDDA2/(TP_EDDA2+FN_EDDA2)
+TNR_EDDA2 <- TN_EDDA2/(TN_EDDA2+FP_EDDA2)
+Test_Error_EDDA2 <- (FP_EDDA2+FN_EDDA2)/(TP_EDDA2+TN_EDDA2+FP_EDDA2+FN_EDDA2)
+```
+
+Created the MclustDA model on the training data with the new variables using the same method as in the first model.
+
+```{r}
+kable(as.data.frame(t(data.frame(n=summary(mclust.mod2)$n,Proportion=round(summary(mclust.mod2)$prop,2),Model=summary(mclust.mod2)$modelName,G=summary(mclust.mod2)$G))),caption='Summary of Mclust Model 2 (Train)')
+kable(data.frame(Metrics=c('Class Error','Brier Score','Log Like','BIC'),Values=c(summary(mclust.mod2)$err,summary(mclust.mod2)$brier,summary(mclust.mod2)$loglik,BIC=summary(mclust.mod2)$bic)),digits=3,caption='Metric Summary of Mclust Model 2 (Train)')
+
+mclust.cf2 <- summary(mclust.mod2)$tab
+colnames(mclust.cf2) <- c('Pred Down','Pred Up')
+rownames(mclust.cf2) <- c('Act Down','Act Up')
+kable(mclust.cf2, caption='Weekly MclustDA Confusion Matrix')
+```
+
+Summary of MclustDA Model shows that the model off the training data with the lowest BIC uses a diagonal, varying volume and shape model with 14 groups for the *Down* class and 12 for the *Up* class. The BIC is -47,784.29. This is lower than the previous model with just the Lag variables and less of a fit according to BIC, but better of a fit according to class error.
+
+Created the MclustDA model setting the model type to 'EDDA' on the training data with the new variables using the same method as in the first model.
+
+```{r}
+kable(as.data.frame(t(data.frame(n=summary(mclust.EDDA2)$n,Proportion=round(summary(mclust.EDDA2)$prop,2),Model=summary(mclust.EDDA2)$modelName,G=summary(mclust.EDDA2)$G))),caption='Summary of Mclust EDDA Model 2 (Train)')
+kable(data.frame(Metrics=c('Class Error','Brier Score','Log Like','BIC'),Values=c(summary(mclust.EDDA2)$err,summary(mclust.EDDA2)$brier,summary(mclust.EDDA2)$loglik,BIC=summary(mclust.EDDA2)$bic)),digits=3,caption='Metric Summary of Mclust EDDA Model (Train)')
+
+mclust.edda.cf2 <- summary(mclust.EDDA2)$tab
+colnames(mclust.edda.cf2) <- c('Pred Down','Pred Up')
+rownames(mclust.edda.cf2) <- c('Act Down','Act Up')
+kable(mclust.edda.cf2, caption='Weekly EDDA MclustDA Confusion Matrix')
+```
+
+Summary of EDDA MclustDA Model shows that the model off the training data with the lowest BIC uses a elliipsoidal, varying volume, shape, and orientation with 1 group for the *Down* and *Up* class. The BIC is -72,443.856. This is lower than the previous model with just the Lag variables and less of a fit according to BIC. It is also much worse than the Mclust model without the EDDA model type.
+
+I built all the models based on the methodology from the prior homework and built a data frame with a summary of the Test Error, Test TPR, and Test TNR and compared the results.
+
+```{r}
+metric.sum2 <- data.frame(Metrics=c('Test Error','Test TPR','Test TNR'),GLM=as.numeric(weekly.glm.res2),LDA=as.numeric(weekly.lda.res2),QDA=as.numeric(weekly.qda.res2),KNN=as.numeric(weekly.knn.res2),Mclust=c(Test_Error_DA2,TPR_DA2,TNR_DA2),Mclust_EDDA=c(Test_Error_EDDA2,TPR_EDDA2,TNR_EDDA2))
+kable(metric.sum2,digits=3,caption='Model Summaries for Weekly Data\nSelect Lag Variables')
+```
+
+Comparing the 2 set of variables, the GLM model did not change. THe LDA model had a slightly better Test Error Rate, with a better TPR and worse TNR. QDA had a better Rest Error, with a better TPR and worse TNR. KNN Test Error stayed the same, with slightly better TPR and worse TNR. The Mclust DA model had a worse metrics for all 3 from the other model, while the EDDA model had a worse Test Error and TNR with a better TNR.
+
+In addition, it looks like the Mclust model overfit the data as the traing error was lower than the first model, but the test error was higher than the first model. 
+
+Overall, similar to Homework 4, the KNN model seems to preform better with the second lowest Test Error, with a more balance TPR and TNR.
+
+\footnotesize Source: [An Introduction to Statistical Learning](https://github.com/LamaHamadeh/DS-ML-Books/blob/master/An%20Introduction%20to%20Statistical%20Learning%20-%20Gareth%20James.pdf), [MclustDA Part 1 Lecture, Dr. Saunders, Dakota State University](https://d2l.sdbor.edu/d2l/le/content/1543761/viewContent/8840183/View), and [Package ‘mclust’](https://cran.r-project.org/web/packages/mclust/mclust.pdf)
+
+
