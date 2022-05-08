@@ -1,0 +1,641 @@
+---
+title: "Homework 2 - STAT602"
+author: "Snigdha Peddi"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=F,warning=F,echo=F,fig_height=10,fig_width=7,cache = F)
+```
+
+```{r libraries}
+
+# libraries used for Homework 2
+
+#install.packages("MASS")
+library(MASS)
+#install.packages("ISLR")
+library(ISLR)
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("GGally")
+library(GGally)
+#install.packages("knitr")
+library(knitr)
+#install.packages("purrr")
+library(purrr)
+#install.packages("tidyr")
+library(tidyr)
+
+```
+
+
+
+**Question 3.7.5. Consider the fitted values that result from performing linear regression without an intercept. In this setting, the ith fitted value takes the form**
+
+
+$$
+\hat{y_i}= \ x_i \hat{\beta}
+$$
+where
+
+$$
+\hat{\beta}=(\sum_{i = 1}^{n}{(x_iy_i)})/(\sum_{i' = 1}^{n}{(x ^2_{i'})})
+$$
+Show that we can write
+
+$$
+\hat{y_i}= \sum_{i' = 1}^{n}a_{i'}y_{i'}
+$$
+
+What is 
+$$
+\ a_{i'} ?
+$$
+Note: We interpret this result by saying that the fitted values from linear regression are linear combinations of the response values.**
+
+
+
+**Answer 3.7.5.**
+
+
+$$
+\hat{y_i}= \ x_i \hat{\beta}
+$$
+$$
+ =\ x_i \frac{\sum_{i = 1}^{n}{x_iy_i}}{\sum_{i' = 1}^{n}{x ^2_{i'}}}
+$$
+
+
+$$
+ =\frac{\sum_{i = 1}^{n}{x_i^2y_i}}{\sum_{i' = 1}^{n}{x ^2_{i'}}}
+$$
+ Multiplying and dividing by sum of y_i' values from i'=1 to n
+ 
+$$
+ =\frac{\sum_{i = 1}^{n}{x_i^2y_i}}{\sum_{i' = 1}^{n}{x ^2_{i'}}} \frac{{\sum_{i' = 1}^{n}y_{i'}}}{{\sum_{i' = 1}^{n}y_{i'}}}
+$$
+Summation over i and i' are independent with respect to each other
+
+$$
+ = \sum_{i' = 1}^{n} \frac{\sum_{i = 1}^{n}{x_i^2y_i}}{\sum_{i' = 1}^{n}{x ^2_{i'} {{\sum_{i' = 1}^{n}y_{i'}}}}}  y_{i'}
+$$
+
+$$
+ \hat{y_i}= \sum_{i' = 1}^{n} a_{i'} y_{i'}
+$$
+where,
+
+$$
+a_{i'}= \frac{\sum_{i = 1}^{n}{x_i^2y_i}}{\sum_{i' = 1}^{n}{x ^2_{i'} {{\sum_{i' = 1}^{n}y_{i'}}}}}
+$$
+
+#### References
+
+- R Markdown for Scientist blog, Chapter 11 Math.(https://rmd4sci.njtierney.com/math)
+
+
+
+
+**Question 3.7.10. This question should be answered using the Carseats data set.**
+
+
+```{r Code Chunk-1}
+# Reading Carseats data from ISLR package
+carseats <- ISLR::Carseats
+
+#attaching the dataset to the R file
+attach(carseats)
+
+# Investigating the dimensions, column names and summary of college dataset
+cat("\n Dimensions of dataset:",dim(carseats),"\n")
+
+
+cat("\n col names:",colnames(carseats),"\n")
+
+
+#head(carseats)
+
+#To check if there are any missing variables
+
+cat("\n Number of missing values in dataset:",carseats %>% is.na() %>% sum())
+
+cat("\n\n")
+```
+
+**(a)** Fit a multiple regression model to predict Sales using Price, Urban, and US.
+
+
+```{r Code Chunk-2}
+
+Model1 <- lm(Sales ~ Price+Urban+US ,data=carseats)
+print("Summary of Lineal Model1:")
+summary(Model1)
+```
+
+**(b)** Provide an interpretation of each coefficient in the model. Be careful—some of the variables in the model are qualitative!
+
+
+From the the coefficients obtained above we can interpret that,
+- with a one unit increase in Price the sales decrease by 0.05 units on average given other variables are constant.
+- if the store is present in an urban area then the sales decrease by 0.02 units on average given other variables are constant. However, as the p value is higher it indicates that there is not enough evidence to say that presence of store in an urban area would effect the sales (no eveidenc e that a relationship exists between Sales and Urban)
+- if the store is present in the  US  then the sales increase by 1.20 units on average given other variables are constant.
+
+
+
+**(c)** Write out the model in equation form, being careful to handle the qualitative variables properly.
+
+
+ \begin{equation}
+    Sales= 13.043469 -0.054459.Price - 0.021916.UrbanYes + 1.200573.USYes
+  \end{equation}
+  
+  
+**(d)** For which of the predictors can you reject the null hypothesis H0 : βj = 0?
+
+
+From the p values of model summary we can reject the null hypothesis for variables Price and USYes(lower p values). However, there is no evidence of relationship between UrbanYes and Sales (higher p value) to reject Null hypothesis.
+
+
+**(e)** On the basis of your response to the previous question, fit a smaller model that only uses the predictors for which there is evidence of association with the outcome.
+
+
+```{r Code Chunk-3}
+Model2 <- lm(Sales ~ Price+US ,data=carseats)
+print("Summary of Lineal Model2:")
+summary(Model2)
+```
+
+
+**(f)** How well do the models in (a) and (e) fit the data?
+
+
+ The Adjusted R2 value of Model 1 and Model 2 are pretty close, 0.2335 and 0.2354 respectively with a similar R-squared value (though the model 1 has one variable that has no significance).
+ However, the F-statistic of Model 2 (62.43) is higher than Model 1(41.52) which indicates that the significance of overall model is well explained by Model 2.
+ 
+ 
+**(g)** Using the model from (e), obtain 95 % confidence intervals for the coefficient(s).
+
+```{r Code Chunk-4}
+cat("95% confidence intervals for the coefficients of Model 2:\n")
+confint(Model2,level=0.95)
+```
+
+
+**(h)** Is there evidence of outliers or high leverage observations in the model from (e)?
+
+- Outliers are the points that fall far from the other data points. These are the points that are extreme in someway.
+- If the parameter estimates change a great deal when a point is removed from the calculations, the point is said to be influential.
+- Points with extreme values of X are said to have high leverage. High Leverage points have a greater ability to move the line.If these points fall outside the overall pattern, they can be influential.
+
+   Considering the Linear model fit before with variables Price and stores located in US the following interpretations are made.
+  
+```{r Code Chunk-5}
+# plot of Sales vs Price variables
+plot(Sales~Price ,data=carseats,
+      xlab="Price($)",
+      ylab="Sales($)",
+      main=" Sales Vs Price of carseats")
+# plot of Sales vs Stire lacated in US
+plot(Sales~US ,data=carseats,
+      xlab="Stores Located in US",
+      ylab="Sales($)",
+      main=" Sales Vs Stores Located in US")
+```
+```{r Code Chunk-6}
+# Identifying the outliers by arranging the rows by column values
+cat("Observed outliers of Price variable:\n")
+(head(carseats %>% arrange(Price),1))
+cat("\n\n")
+
+```
+```{r Code Chunk-7}
+cat("Observed outliers of Price variable:\n")
+tail(carseats %>% arrange(Price),2)
+
+```
+```{r Code Chunk-8}
+
+cat("Observed outliers of US variable:\n")
+(head(carseats  %>% filter (US == "No") %>% arrange(desc(Sales)),2) )
+```
+  Visual observation of the plots and the extracted data shows that the rows 43,175,166,26,368 are outliers. However,the Q-Q plot of Model2 shows that all the data points follow the trend and there are no outliers.
+  
+  
+```{r Code Chunk-9}
+# plotting the Model2
+plot(Model2,sub.caption= "Model2")
+
+```
+
+   Leverage points can be calculated from hat values.Average value of leverage points for the observations is given by (p+1)/n. Where, p is the number of predictors in the model and n is total number of observations. For our model we have an average leverage value of 0.0075. 3 times the average leverage value gives the high leverage points. The Residual vs Leverage plot show that most of the standardized residuals fall between -2 and 2 indicating that there are not many high leverage observations.
+   
+   
+```{r Code Chunk-10}
+# Average leverage value
+cat (" Average Leverage value:", round(((2 + 1) / nrow(Carseats)), 10),"\n\n")
+# verifying the mean value of leverage points
+#round(((2 + 1) / nrow(Carseats)), 10) == round(mean(hatvalues(Model2)), 10)
+# levarage values can be calculated by hat values.
+Lev <-hatvalues(Model2)
+#Getting list of high leverage points
+data.frame(High_Leverage_values = Lev[Lev>3*(3/400)])
+```
+ 
+ The plot againest the total obseravtions and hat values from the model confirms the above high leverage points.
+ 
+ 
+```{r Code Chunk-11}
+plot(hatvalues(Model2),pch=16,cex=0.5,main="Leverage Values",ylab="hatvalues",xlab="Observation No.")
+abline(h=2*3/400,lty=2)
+abline(h=3*3/400,lty=2)
+#identify(1:400,hatvalues(Model2),row.names(carseats))
+```
+```{r Code Chunk-12}
+#Standardized_residuals <-sort(rstudent(Model2))
+
+```
+
+  
+  To verify if these high leverage points are influential we will calculate Cooks distance. If the cooks distance is greater than 1 then the points influence the parameter estimates. Cooks distance give information on how far x-values are from the mean of the x's and how far is y from the regression line. From the plots below it is clear that no observation has a cook's value greater than 1 and hence there are no influential points.
+  
+
+```{r Code Chunk-13}
+plot(cooks.distance(Model2),main="Cooks Distance of Linear Model 2",xlab="Observations",ylab="Cooks Distance")
+cat("Cooks distance for Price Variable:\n\n")
+with(carseats,(plot(Price,cooks.distance(Model2),xlab="Price",ylab="Cook's DIstance",main="Cook's Distance Vs Price")))
+cat("Cooks distance for US Variable:\n\n")
+with(carseats,(plot(US,cooks.distance(Model2),xlab="Stores located in US",ylab="Cook's DIstance",main="Cook's Distance Vs Stores located in US")))
+#identify(carseats$Price,cooks.distance(Model2))
+#cooks.distance(Model2)
+```
+
+```{r Code Chunk-14}
+# Removing the high leverage observations to verify if they influence the regression line
+car <-carseats[-c(43, 125,166, 175,314,368), ]
+Model3 <- lm(Sales ~ Price+US ,data=car)
+print("Summary of Lineal Model3:")
+summary(Model3)
+
+```
+
+
+```{r Code Chunk-15}
+plot(Sales~Price ,data=carseats,
+      xlab="Price",
+      ylab="Sales",
+        main=" Sales Vs Price")
+
+# Adding a regression line 
+lines(smooth.spline(carseats$Price,predict(Model2)),col="blue",lwd=3)
+lines(smooth.spline(car$Price,predict(Model3)),col="red",lwd=3)
+
+#Adding Legend
+
+legend("topleft",legend=c("All Included","High Lev Excluded"),col=c("blue","red"),lty=1,cex=0.6)
+```
+  
+  
+  To confirm that the high leverage points are not influential a new linear model is fit after removing the high leverage points. Both the Red (Excluding high leverage points) and Blue(all observations included)regression lines are very close and none of the points influenced the regression lines.Adjusted R Square of Model 3 (Excluding high leverage points is 0.21(Model3) where as adjusted R sqaure of Model 2 with all observations included is 0.24.
+  
+  In conclusion, there are no outliers that are extreme to the regression line(Q-Q plot). There are few High leverage points that have low influence on the Regression line. 
+  
+
+### REFERENCES
+
+- Lecture by Jonathan Brown,*Interpreting R Output For Simple Linear Regression Part 1(EPSY 5262)*, Jan 31,2016.
+- Lecture by Jonathan Brown,*Interpreting R Output For Simple Linear Regression Part 2(EPSY 5262)*, Feb 8,2016.
+- Lecture from jbstatistics,*Leverage and influential points in simple linear regression*,Dec 23,2012.
+- Lecture by Phil Chan,*Statistics with R: Example of outlier and leverage analysis part 1 of 3*,Nov 7,2012.
+- Lecture by Phil Chan,*Statistics with R: Example of outlier and leverage analysis part 2 of 3*,Nov 7,2012.
+- Lecture by Phil Chan,*Statistics with R: Example of outlier and leverage analysis part 3 of 3*,Nov 7,2012.
+- PDF document, 22s:152 Applied Linear Regression, University of Iowa, *Chapter 11 Diagnostics: Unusual and Influential Data:Outliers,Leverage, and Influence*.
+
+
+
+**Question 3.7.15. This problem involves the Boston data set, which we saw in the lab for this chapter. We will now try to predict per capita crime rate using the other variables in this data set. In other words, per capita crime rate is the response, and the other variables are the predictors.**
+
+
+```{r Code Chunk-16}
+# Reading Boston data 
+data(Boston)
+
+
+# Investigating the dimensions, column names and summary of college dataset
+cat("\n Dimensions of dataset:",dim(Boston),"\n")
+
+
+cat("\n column names of dataset:", colnames(Boston),"\n")
+
+
+#head(Boston)
+
+#To check if there are any missing variables
+
+cat("\n Number of missing values in dataset:",Boston %>% is.na() %>% sum())
+
+cat("\n\n")
+
+```
+
+
+**(a)** For each predictor, fit a simple linear regression model to predict the response. Describe your results. In which of the models is there a statistically significant association between the predictor and the response? Create some plots to back up your assertions.
+
+   A linear model of form
+   
+  \begin{equation}
+  lm(y ~ x,data=Boston)
+  \end{equation}
+  
+  is fit for individual predictors against the Per capita crime rate by town(crim) and the p value of each linear model were extracted and presented in the table. From the p values it is clear that except for the "chas" variable all other predictors have a very low p value at 95% confidence interval and are significant indicating a statistically significant association.
+  
+  
+```{r COde Chunk-17}
+# Creating a emplty vector to store pvalues
+
+Pvalue <- c()
+rsq<-c()
+# response variable
+y <- Boston$crim
+#number of columns in Boston Dataset
+z <-ncol(Boston)
+
+# Loop to capture pvalues of linear models with one variables from the boston dataset each time
+
+for (i in 1:z) {
+  x <- Boston[ ,i]
+  if (identical(x,y)) {
+    Pvalue[i] <- NA
+    rsq[i]<-NA
+  } else {
+    rsq[i] <- summary(lm(y ~ x))$r.squared
+    Pvalue[i] <- summary(lm(y ~ x))$coefficients[2, 4]
+  }
+}
+
+# printing the p values as dataframe
+
+Modelpvalues <- data.frame(Predictor = colnames(Boston), Pvalue = round(Pvalue, 8),rsq= round(rsq, 4))%>% arrange(desc(Pvalue))
+
+Modelpvalues
+
+```
+
+```{r Code Chunk-18}
+
+
+ plot(crim~zn ,data=Boston,cex.main=0.8,
+      xlab="Proportion of Residential Land",
+      ylab="Crime Rate",
+      main="Crime vs Proportion of Residential Land")
+abline(lm(crim~zn,data=Boston),col="blue")
+
+ plot(crim~indus ,data=Boston,cex.main=0.8,
+      xlab="Proportion of Non-retail Business",
+      ylab="Crime Rate",
+      main="Crime vs Proportion of Non-retail Business")
+abline(lm(crim~indus,data=Boston),col="blue")
+
+plot(crim~nox ,data=Boston,cex.main=0.8,
+      xlab="Nitric Oxides Concentration",
+      ylab="Crime Rate",
+      main="Crime vs Nitric Oxides Concentration")
+abline(lm(crim~nox,data=Boston),col="blue")
+
+plot(crim~rm ,data=Boston,cex.main=0.8,
+      xlab="Average No. of Rooms",
+      ylab="Crimee Rate",
+      main="Crime vs Average No. of Rooms")
+abline(lm(crim~rm,data=Boston),col="blue")
+
+plot(crim~age ,data=Boston,cex.main=0.8,
+      xlab="Proportion of Owner Occupied Uints",
+      ylab="Crime Rate",
+      main="Crime vs Proportion of Owner Occupied Uints")
+abline(lm(crim~age,data=Boston),col="blue")
+
+plot(crim~dis ,data=Boston,cex.main=0.8,
+      xlab="Weighted distance of Employemnt centers",
+      ylab="Crime Rate",
+      main="Crime vs Weighted distance of Employemnt centers")
+abline(lm(crim~dis,data=Boston),col="blue")
+
+plot(crim~rad ,data=Boston,cex.main=0.8,
+      xlab="Accessability Index",
+      ylab="Crime Rate",
+      main="Crime vs Accessability Index")
+abline(lm(crim~rad,data=Boston),col="blue")
+
+plot(crim~tax ,data=Boston,cex.main=0.8,
+      xlab="Tax rate / $10,000",
+      ylab="Crime Rate",
+      main="Crime vs Tax rate / $10,000")
+abline(lm(crim~tax,data=Boston),col="blue")
+
+plot(crim~ptratio ,data=Boston,cex.main=0.8,
+      xlab="Pupil-Teacher Ratio",
+      ylab="Crime Rate",
+      main="Crime vs Pupil-Teacher Ratio")
+abline(lm(crim~ptratio,data=Boston),col="blue")
+
+plot(crim~black ,data=Boston,cex.main=0.8,
+      xlab="Proportion of Blacks",
+      ylab="Crime Rate",
+      main="Crime vs Proportion of Blacks")
+abline(lm(crim~black,data=Boston),col="blue") 
+
+plot(crim~lstat,data=Boston,cex.main=0.8,
+      xlab="% Lower Status of Population",
+      ylab="Crime Rate",
+      main="Crime vs % Lower Status of Population")
+abline(lm(crim~lstat,data=Boston),col="blue")
+
+plot(crim~medv,data=Boston,cex.main=0.8,
+      xlab="Median Value of Owner occupied Houses in 10,000$",
+      ylab="Crime Rate",
+      main="Crime vs % Median Value of Owner occupied Houses")
+abline(lm(crim~medv,data=Boston),col="blue")
+
+```
+
+  The scatter plots of individual predictor and the crime rate show the linear relationship. They have positive and negative slopes.Their relationship is explained by the linear models statistically. The Adjust R square values of these models are very low which are correlating to the regression lines fit over the scatter plots.
+  
+
+```{r Code Chunk-19,fig.height=8,ig.height=12}
+#ggpairs(Boston,title="Boston:ggplot")
+```
+
+
+**(b)** Fit a multiple regression model to predict the response using all of the predictors. Describe your results. For which predictors can we reject the null hypothesis H0 : βj = 0?
+ 
+ 
+  The null hypothesis can be rejected for the predictors *zn*- proportion of residential land zoned for lots over 25,000 sq.ft,*dis*- weighted distances of 5 Boston employment centers,*rad*-index of accessibility to radial highways,*black*-Proportion of Blacks by town and *medv*-median value of owner occupied homes. They have a low p value at 95% confidence level. There is no sufficient evidence to rejct the null hypothesis for remaining predictors.
+
+```{r Code Chunk-20}
+Model5 <-lm (crim~.,data=Boston)
+summary(Model5)
+```
+
+**(c)** How do your results from (a) compare to your results from (b)? Create a plot displaying the univariate regression coefficients from (a) on the x-axis, and the multiple regression coefficients from (b) on the y-axis. That is, each predictor is displayed as a single point in the plot. Its coefficient in a simple linear regression model is shown on the x-axis, and its coefficient estimate in the multiple linear regression model is shown on the y-axis.
+
+   The coefficients of the univariate models of all predictors and the coefficients of all predictor from multivariate models are pooled together and presented in the below table.These estimates were plotted by taking Univariate coefficients on X axis and multivariate coefficients on Y axis.Both base R plot and ggplot were fit.
+
+```{r Code CHunk-21}
+# Creating a emplty vector to store pvalues
+
+uni_coeff <- c()
+# response variable
+y <- Boston$crim
+#number of columns in Boston Dataset
+z <-ncol(Boston)
+
+# Loop to capture Estimates of linear models with one variables from the boston dataset each time
+
+for (i in 1:z) {
+  x <- Boston[ ,i]
+  if (identical(x,y)) {
+    uni_coeff[i] <- NA
+    
+  } else {
+    
+    uni_coeff[i] <- summary(lm(y ~ x))$coefficients[2, 1]
+  }
+}
+
+# printing the Estimates as dataframe from univariate models
+
+Mod_uni_coeff <- data.frame(Predictor = colnames(Boston), uni_coeff = round(uni_coeff, 4)) %>% arrange(desc(uni_coeff))
+
+#Mod_uni_coeff 
+
+# printing the Estimates as dataframe from umultivariate model
+
+Multi_coeff <-data.frame(Multi_coeff=round(summary(Model5)$coefficients[-1, 1],4))
+
+Multi_coeff <-cbind(Predictor=rownames(Multi_coeff),Multi_coeff)
+
+# emoving the rownames
+rownames(Multi_coeff)<-NULL
+#Multi_coeff
+
+#Joining the estimates from univariate and multivariate models
+
+Reg_coeff <- inner_join(Mod_uni_coeff , Multi_coeff, by = "Predictor") 
+Reg_coeff
+
+```
+
+```{r Code Chunk-22}
+
+plot(Multi_coeff~uni_coeff ,data=Reg_coeff,cex.lab=0.8,
+      xlab="Coefficients from Simple Linear Regression",
+      ylab="Coefficients from Multiple Linear Regression",
+      main="Simple vs Multiple Regression Coefficients")
+```
+```{r Code CHunk-23}
+ggplot(Reg_coeff, aes( uni_coeff,Multi_coeff)) + 
+  geom_point(color="darkred")+
+  labs(title="Simple vs Multiple Regression Coefficients using ggplot",
+        x='Coefficients from Simple Linear Regression',
+        y='Coefficients from Multiple Linear Regression') 
+```
+
+
+**(d)** Is there evidence of non-linear association between any of the predictors and the response? To answer this question, for each predictor X, fit a model of the form
+Y = β0 + β1X + β2X2 + β3X3 + .
+
+ A polynomial model of form
+
+ \begin{equation}
+  lm(y ~ x+I(x^2)+I(x^3),data=Boston)
+  \end{equation}
+  
+  is fit individually for all the predictors except chas variable. And the pvalues of all orders of polynomials were pooled together for all the predictors and presented in the below table. Significantly lower pvalues for 3rd order polynomials of indus,nox,medv,dis,ptratio,age variables indicate that there is a non-linear relationship between these variables and crime rate at 95% confidence interval.zn variable has a low p value for the first order parameter inidicating a linear relationship.
+  
+
+```{r Code Chunk-24}
+# creating new dataset after removing chas variable from Boston Dataset
+Bos<-Boston[,-4]
+#ncol(Bos)
+
+# Creating a emplty vector to store pvalues
+
+P1value <- c()
+P2value <- c()
+P3value <- c()
+# response variable
+y <- Bos$crim
+#number of columns in Boston Dataset
+z <-ncol(Bos)
+
+# Loop to capture all pvalues of polynomial models with one variables from the Boston data set each time
+
+for (i in 1:z) {
+  x <- Bos[ ,i]
+  
+    Model <- lm(y ~ x+I(x^2)+I(x^3))
+  if (!identical(x,y)) {
+    P1value[i] <- summary(Model)$coefficients[2,4]
+    P2value[i] <- summary(Model)$coefficients[3,4]
+    P3value[i] <- summary(Model)$coefficients[4,4]
+   
+  } else {
+    
+    P1value[i] <- NA
+    P2value[i] <- NA
+    P3value[i] <- NA
+  }
+}
+
+# printing the p values as dataframe
+
+ModelEstimates <- data.frame(Predictor = colnames(Bos), P1value = round(P1value, 8),P2value = round(P2value, 8),P3value = round(P3value, 8)) %>% arrange((P3value))
+ModelEstimates
+
+#comparision <- inner_join(Modelpvalues , ModelEstimates, by = "Predictor") 
+#comparision
+```
+
+```{r Code chunk-25}
+#plot(crim~medv,data=Boston,cex.main=0.8,
+   #   xlab="Median Value of Owner occupied Houses in 10,000$",
+    #  ylab="Crime Rate",
+  #    main="Crime vs % Median Value of Owner occupied Houses")
+
+#abline(lm(crim~medv,data=Boston),col="blue")
+
+#lines(smooth.spline(Boston$crim,predict(lm(crim~medv,data=Boston))),col="blue",lwd=2) 
+#lines(smooth.spline(Boston$crim,predict(lm(crim~medv+I(medv^2)+I(medv^3),data=Boston))),col="red",lwd=2)
+
+```
+```{r}
+#plot(crim~medv,data=Boston,cex.main=0.8,
+ #     xlab="Median Value of Owner occupied Houses in 10,000$",
+  #    ylab="Crime Rate",
+  #    main="Crime vs % Median Value of Owner occupied Houses")
+# Model6<- lm(crim~medv+I(medv^2)+I(medv^3),data=Boston)
+#abline(Model6)
+```
+
+```{r Code CHunk-26}
+par(mflrow=c(1,2))
+#ggplot
+
+ggplot(data=Boston,aes(x=dis,y=crim))+geom_point()+geom_smooth(method="lm",formula="y ~ x ",col="red")+
+  labs(title='Crime vs % Weighted distance of Employemnt centers:Linear reg line', x='Weighted distance of Employemnt centers', y='Crime Rate')
+
+ggplot(data=Boston,aes(x=dis,y=crim))+geom_point()+geom_smooth(method="lm",formula="y ~ x + I(x^2) + (x^3)",col="green")+
+  labs(title='Crime vs % Weighted distance of Employemnt centers:polynomial reg line', x='Weighted distance of Employemnt centers', y='Crime Rate')
+```
+  I have compared the linear regression plot and the Polynomial regression plot for dis variable to confirm that the cubic order fit better explains this variable.
+  
+  
+
+### References
+
+- Stackoverflow blog,*pull out p-values and r-squared from a linear regression*.
+- STHDA Articles-Regression Analysis by kassambara,*Nonlinear Regression Essentials in R: Polynimial and spline Regression Models*, Nov 3,2018.
