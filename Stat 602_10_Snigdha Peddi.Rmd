@@ -1,0 +1,552 @@
+---
+title: "Homework 10"
+author: "Snigdha Peddi"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=F,warning=F,echo=F,fig_height=10,fig_width=7,cache = F)
+```
+
+```{r libraries}
+#install.packages("ISLR")
+library(ISLR)
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("knitr")
+library(knitr)
+#install.packages("tidyr")
+library(tidyr)
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("GGally")
+library(GGally)
+#install.packages("MASS")
+library(MASS)
+#install.packages("purrr")
+library(purrr)
+#install.packages("mclust")
+library(mclust)
+#install.packages('class')
+library(class)
+#install.packages('blorr')
+library(blorr)
+#install.packages('caTools')
+library("caTools")
+#install.packages('caret')
+library("caret")
+#install.packages('Boot')
+library("boot")
+#install.packages('glmnet')
+library(glmnet)
+#install.packages('splines2')
+library(splines2)
+```
+
+## Exercises (ISLR)
+
+### Use set.seed(202110) in each exercise to make results reproducible.
+
+**Be explicit  in citing all of your sources.**
+
+### Question 1. In this exercise, you will further analyze the **rock** data set. *You can use Dr. Saunders' toy example from the ridge regression code to help*
+
+*a)* Perform polynomial regression to predict `area` using `perimeter`. Use cross-validation to select the optimal degree $d$ for the polynomial. What degree was chosen, and how does this compare to the results of hypothesis testing using ANOVA? Make a plot of the resulting polynomial fit to the data.
+
+### Answer:
+
+  A Quadratic model is fit for the Rock data using *poly()* function and 10 degrees. The coefficients of the model indicate that the linear model with degree 1 and quadratic model with degree 3  are significant at 95% confidence interval with the significant p-values.
+
+```{r Code Chunk-1}
+rok<-rock
+#head(rok)
+#Dimensions of Rock data
+cat("\nDimensions of Rock dataset:",dim(rok))
+
+```
+
+```{r Code Chunk-2}
+set.seed(202110)
+# Fitting Linear Regression Model for Rock Data
+lm.mod<-glm(area ~ poly(peri,10),data=rock)
+#Summary of Rock Data
+cat("Quadratic Model for Rock Data:\n")
+summary(lm.mod)$call
+cat("\nCoefficients of Quadratic Model for Rock Data:\n")
+coefficients(summary(lm.mod))
+#Predictions made on the original data
+#pred<-predict(lm.mod,rok$peri)
+#Calculating MSE of the model
+#cat("MSE of the Linear model:",mean((rok$area-pred)^2))
+#cat("\n\nThe MSE of the model(at Lambda=1):",min(data.rok$mse))
+#summary(lm.mod)
+```
+
+  *cv.glm()* function is used to perform LOOCV for the Rock Data upto 10 polynomial degrees. From the table below it is clear that a Quadratic fit with a 3rd degree polynomial is a good fit with the lowest MSE of 1752525. This can also be observed in the plot between the polynomial degree and the MSE.The vertical line indicates that the lowest MSE is for a fit using 3rd order polynomial of perimeter variable.
+
+```{r Code Chunk-3}
+set.seed(202110)
+# Creating a empty dataframe 
+lm.mod_cv<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Degree","MSE")
+colnames(lm.mod_cv)<-colname
+# Running a for loop for polynomials of peri variable
+for (i in 1:10){
+  lm.mod<-glm(area ~ poly(peri,i),data=rok)
+  lm.mod_cv[i,1] <- i
+  lm.mod_cv[i,2] <- cv.glm(rok,lm.mod)$delta[1]
+}
+kable(lm.mod_cv, caption="LOOCV Errors for Quadratic fit of Rock Data")
+cat("\nDegree at which Lowest MSE observed:",lm.mod_cv$Degree[lm.mod_cv$MSE==min(lm.mod_cv$MSE)])
+cat("\n\nLowest MSE observed:",min(lm.mod_cv$MSE))
+
+```
+
+```{r Code Chunk-4}
+plot(MSE~Degree,data=lm.mod_cv,type = "b", pch=16,col="blue",xlab=" Polynomial Degree",ylab="MSE",main="Polynomial Degree vs Cross Validation Error: Quadratic Fit",cex.main=0.8,cex.lab=0.8)
+abline(v=lm.mod_cv$Degree[lm.mod_cv$MSE==min(lm.mod_cv$MSE)], col="red")
+```
+
+  Hypothesis testing is performed using Analysis of Variance,*ANOVA*. To use the anova a series of linear nested models were fit from degree 1 to degree 10 polynomials.The p-value of linear model is zero indicating that this model is not sufficient to explain the data.The significant pvalue of degree 3 polynomial indicates that it failed to reject the null hypothesis and this model is sufficient to explain the data than the higher order complex models. A plot of the resulting polynomial fit is presented below.
+  
+```{r Code Chunk-5}
+set.seed(202110)
+# Fitting linear models for Hypothesis testing using ANOVA
+lm.mod_1<-lm(area ~ poly(peri,1),data=rock)
+lm.mod_2<-lm(area ~ poly(peri,2),data=rock)
+lm.mod_3<-lm(area ~ poly(peri,3),data=rock)
+lm.mod_4<-lm(area ~ poly(peri,4),data=rock)
+lm.mod_5<-lm(area ~ poly(peri,5),data=rock)
+lm.mod_6<-lm(area ~ poly(peri,6),data=rock)
+lm.mod_7<-lm(area ~ poly(peri,7),data=rock)
+lm.mod_8<-lm(area ~ poly(peri,8),data=rock)
+lm.mod_9<-lm(area ~ poly(peri,9),data=rock)
+lm.mod_10<-lm(area ~ poly(peri,10),data=rock)
+roc.aov<-anova(lm.mod_1,lm.mod_2,lm.mod_3,lm.mod_4,lm.mod_5,lm.mod_6,lm.mod_7,lm.mod_8,lm.mod_9,lm.mod_10)
+x<-c(1:10)
+y<-round(roc.aov$`Pr(>F)`,5)
+kable(data.frame(Degree=x,Pvalue=y),caption="P-value of different polynomial fits")
+
+```
+
+```{r Code Chunk-6}
+# Making a plot of the resulting polynomial fit to the data.
+lm.mod_3<-lm(area ~ poly(peri,3),data=rok)
+#Model with optimal polynomial degree
+cat("\nQuadratic model with Optimum Degree,3:\n\n")
+summary(lm.mod_3)$call
+#new <- data.frame(peri = rok$peri)
+#lm.mod_3_predict <- predict(lm.mod_3,new,interval="confidence")
+plot(area~peri,data=rok,pch=16,col="blue",xlab=" Perimeter",ylab="Area",main="Polynomial Fit of Rock data (Polynomial degree=3)",cex.main=0.9)
+#lines(rok$peri,fitted(lm.mod_3),col='red',type="p",pch=20)
+lines(sort(rok$peri),fitted(lm.mod_3)[order(rok$peri)],col='red',type='l')
+
+```
+
+*b)* Fit a step function to predict `area` using `perimeter`, and perform cross validation to choose the optimal number of cuts. Make a plot of the fit obtained. Do not print out every single model fit from the step function. If you are having issues, please ask!
+
+### Answer:
+
+  Using a for loop and *cut()* function a number of linear models were fit with cuts ranging from 2 to 15. A LOOCV is simultaneously performed. The table below shows the number of cuts made to the perimeter variable and the MSE of the fits. From the table and the plot between number of cuts and cross validation error it is clear that the lowest MSE is observed when perimeter variable was grouped into 12 bins.
+
+```{r Code Chunk-7}
+set.seed(202110)
+# Creating new dataframe
+lm.mod_cut<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Cut","mse")
+colnames(lm.mod_cut)<-colname
+#Running a for loop for polynomials of peri variable
+
+for (i in 2:15){
+  #creating a temp variable
+  rok$temp<-cut(rok$peri,i,labels=FALSE)
+ #rok$temp<-rock$peri[,drop=TRUE]
+  mod1<-glm(area~temp,data=rok)
+  lm.mod_cut[i,1] <- i
+ lm.mod_cut[i,2] <- cv.glm(rok,mod1)$delta[1]
+}
+
+kable(drop_na(lm.mod_cut),caption="Breaks vs MSE of the models")
+z<-min(drop_na(lm.mod_cut)$mse)
+cat("\n\nLowest MSE observed:",min(drop_na(lm.mod_cut)$mse))
+cat("\n\nCut at which MSE is Lowest:",12)
+
+```
+
+```{r Code Chunk-8}
+plot(mse~Cut,data=lm.mod_cut,type = "b", pch=16,col="blue",xlab=" Breaks",ylab="MSE",main="Breaks vs Cross Validation Error: (Optimal Breaks=12)",cex.main=0.8,cex.lab=0.8)
+abline(v=12, col="red")
+```
+
+  A linear model is fit with the optimal number of cuts selected previously(12). The predictions were made and fitted values were plotted. The plot shows some over fitting due to the binning of the perimeter variable.
+
+```{r Code Chunk-9}
+# Making a plot of the resulting polynomial fit to the data.
+mod2<-lm(area~cut(peri,12),data=rok)
+#Model with optimal cuts
+cat("\nLinear model with Optimal Cuts,12:\n\n")
+summary(mod2)$call
+
+#lm.mod_cut[i,2] <- cv.glm(rok,mod1,K=10)$delta[1]
+#new <- data.frame(peri = rok$peri)
+#lm.mod_3_predict <- predict(lm.mod_3,new,interval="confidence")
+plot(area~peri,data=rok,pch=16,col="blue",xlab=" Perimeter",ylab="Area",main="Polynomial Fit of Rock data (Optimal Breaks=12)",cex.main=0.9)
+#lines(rok$peri,fitted(lm.mod_3),col='red',type="p",pch=20)
+lines(sort(rok$peri),fitted(mod2)[order(rok$peri)],col='red',type='l')
+```
+
+*c)* If all of the rocks were perfect circles, what would be the relationship between area and perimeter? If it is not linear, what does that tell you about the shape of the rocks?
+
+### Answer:
+
+ To answer this question I have used perimeter variable to derive the area of the rock (assuming the rocks are perfect circles). I had plotted the new area on x axis and the perimeter on y axis. The scatter plot shows that as the area increase the perimeter of the stone increases. To verify if the relation is linear I had fit a linear model and made predictions. The linear fit shows that though the increase in area and perimeter are directly proportional they do not have a linear fit. Then I fit few quadratic models and from the plots below it is clear that the degree 3 polynomial fit of area perfectly explains the perimeter of the rocks. This shows that the rocks if assumed to be perfect circles they are three dimensional and are spheres.
+ 
+```{r Code Chunk-10, fig.width=10,fig.height=10}
+par(mfrow=c(2,2))
+set.seed(202110)
+# Calculating the area of rock from perimeter assuming rocks are perfect circles.
+rok$area.cir<-(rok$peri^2)/(4*3.14)
+
+#Linear model of perimeter and new area
+plot(peri~area.cir,data=rok,xlab="Area of rock assuming shape of circle",ylab="Perimeter",main="Linear Fit of Rock Data using New Area",cex.main=0.9)
+circle.mod<-lm(peri~area.cir,data=rok)
+cat("\nRelationship between Area and Perimeter-Linear model:\n\n")
+summary(circle.mod)$call
+lines(sort(rok$area.cir),fitted(circle.mod)[order(rok$area.cir)],col='red',type='l')
+#Degree 2 polynomial of perimeter and new area
+plot(peri~area.cir,data=rok,xlab="Area of rock assuming shape of circle",ylab="Perimeter",main="Degree 2 Quadratic fit of Rock Data using New Area",cex.main=0.9)
+circle.mod1<-lm(peri~poly(area.cir,2),data=rok)
+cat("\nRelationship between Area and Perimeter-Quadretic model-Degree 2:\n\n")
+summary(circle.mod1)$call
+lines(sort(rok$area.cir),predict(circle.mod1)[order(rok$area.cir)],col='blue',type='l')
+#Degree 2 polynomial of perimeter and new area
+plot(peri~area.cir,data=rok,xlab="Area of rock assuming shape of circle",ylab="Perimeter",main="Degree 3 Quadratic fit of Rock Data using New Area",cex.main=0.9)
+circle.mod2<-lm(peri~poly(area.cir,3),data=rok)
+cat("\nRelationship between Area and Perimeter-Quadretic model-Degree 3:\n\n")
+summary(circle.mod2)$call
+lines(sort(rok$area.cir),predict(circle.mod2)[order(rok$area.cir)],col='green',type='l')
+```
+
+### References
+
+- Lecture by Abbass AI Sharif, *DSO 530: LOOCV and k-fold CV in R*,Oct 4,2013.
+- Lecture by thatRnerd, *Analysis of Variance(ANOVA) in R*, May 21,2016.
+- Blogpost by stackoverflow, *Plot polynomial regression curve in R*.
+- Blogpost by stackoverflow, *Cross Validation step function in R*.
+- RDocumentation by DataCamp,*cut:Convert Numeric to factor*.
+- Chapter 7,Moving Beyond Linearity,*An Introduction to Statistical Learning with Applications in R* by Gareth James.
+
+
+### Question 2. Exercise 7.9.9 pg 299 **Be explicit  in citing all of your sources.**This question uses the variables dis (the weighted mean of distances to five Boston employment centers) and nox (nitrogen oxides concentration in parts per 10 million) from the Boston data. We will treat dis as the predictor and nox as the response.
+ 
+*(a)* Use the poly() function to fit a cubic polynomial regression to predict nox using dis. Report the regression output, and plot the resulting data and polynomial fits.
+
+### Answer:
+
+  *poly()* function is used to fit a quadratic model of 3rd order using *nox* as response variable and *dis* as predictor from Boston Data. The lower p-values from the coefficient estimates of the fit shows that there is a relation between the two variables. A scatter plot of the data and the polynomial fit is plotted. It further confirms that the quadratic fit explains the data very well and no complex model is required.
+
+```{r Code Chunk-11}
+data("Boston")
+#head(Boston)
+Bos<- Boston[,c(5,8)]
+#head(Bos)
+```
+```{r Code Chunk-12}
+#Quadratic Model
+Bos.mod1<-glm(nox~poly(dis,3),data=Bos)
+#Regression output
+cat("\nRelationship between Distance and Nitric Oxide Concentration-Quadretic model-Degree 3:\n")
+summary(Bos.mod1)
+# Scatter plot of nox vs dis
+plot(nox~dis,data=Bos,xlab="Mean Distance",ylab="Nitric Oxide Concentration",main="Scatter plot with cubic fit: Boston Data",cex.main=0.9)
+lines(sort(Bos$dis),predict(Bos.mod1)[order(Bos$dis)],col='green',type='l')
+
+```
+
+*(b)* Plot the polynomial fits for a range of different polynomial degrees (say, from 1 to 10), and report the associated residual sum of squares.
+
+### Answer:
+
+  Multiple quadratic models of order 1 to 10 were fit and associated residual sum of squares were calculated.Observing the RSS values it is clear that as the polynomial order increased the RSS reduced indicating reduced bias with increase in each polynomial order. Plots of the polynomial fits show that with increasing degree of polynomial the fit smoothend to fit few extream values of dis variable.
+
+```{r Code Chunk-13}
+set.seed(202110)
+# Creating a empty dataframe 
+Bos.mod.dat<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Degree","RSS")
+colnames(Bos.mod.dat)<-colname
+# Running a for loop for polynomials of dis variable
+for (i in 1:10){
+  Bos.mod2<-glm(nox ~ poly(dis,i),data=Bos)
+  Bos.pred2<- predict(Bos.mod2)
+  Bos.mod.dat[i,1] <- i
+  Bos.mod.dat[i,2] <- sum(Bos$nox-Bos.pred2^2)
+}
+cat("\nQuadratic model used for Boston data:\n\n")
+summary(Bos.mod2)$call
+kable(Bos.mod.dat, caption="Residual Sum of Squares for Quadratic fit of Boston Data")
+cat("\nDegree at which Lowest RSS observed:",Bos.mod.dat$Degree[Bos.mod.dat$RSS==min(Bos.mod.dat$RSS)])
+cat("\n\nLowest RSS observed:",min(Bos.mod.dat$RSS))
+```
+```{r Code Chunk-, fig.width=10,fig.height=15}
+par(mfrow=c(5,2))
+Bos.mod21<-glm(nox ~ poly(dis,1),data=Bos)
+
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Quadratic fit with 1 degree polynomial")
+
+lines(sort(Bos$dis),predict(Bos.mod21)[order(Bos$dis)],col='blue',type='l')
+
+Bos.mod22<-glm(nox ~ poly(dis,2),data=Bos)
+
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Quadratic fit with 2 degree polynomial")
+
+lines(sort(Bos$dis),predict(Bos.mod22)[order(Bos$dis)],col='blue',type='l')
+
+Bos.mod23<-glm(nox ~ poly(dis,3),data=Bos)
+
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Quadratic fit with 3 degree polynomial")
+
+lines(sort(Bos$dis),predict(Bos.mod23)[order(Bos$dis)],col='blue',type='l')
+
+Bos.mod24<-glm(nox ~ poly(dis,4),data=Bos)
+
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Quadratic fit with 4 degree polynomial")
+
+lines(sort(Bos$dis),predict(Bos.mod24)[order(Bos$dis)],col='blue',type='l')
+
+Bos.mod25<-glm(nox ~ poly(dis,5),data=Bos)
+
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Quadratic fit with 5 degree polynomial")
+
+lines(sort(Bos$dis),predict(Bos.mod25)[order(Bos$dis)],col='blue',type='l')
+
+Bos.mod26<-glm(nox ~ poly(dis,6),data=Bos)
+
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Quadratic fit with 6 degree polynomial")
+
+lines(sort(Bos$dis),predict(Bos.mod26)[order(Bos$dis)],col='blue',type='l')
+
+Bos.mod27<-glm(nox ~ poly(dis,7),data=Bos)
+
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Quadratic fit with 7 degree polynomial")
+
+lines(sort(Bos$dis),predict(Bos.mod27)[order(Bos$dis)],col='blue',type='l')
+
+Bos.mod28<-glm(nox ~ poly(dis,8),data=Bos)
+
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Quadratic fit with 8 degree polynomial")
+
+lines(sort(Bos$dis),predict(Bos.mod28)[order(Bos$dis)],col='blue',type='l')
+
+Bos.mod29<-glm(nox ~ poly(dis,9),data=Bos)
+
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Quadratic fit with 9 degree polynomial")
+
+lines(sort(Bos$dis),predict(Bos.mod29)[order(Bos$dis)],col='blue',type='l')
+
+Bos.mod20<-glm(nox ~ poly(dis,10),data=Bos)
+
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Quadratic fit with 10 degree polynomial")
+
+lines(sort(Bos$dis),predict(Bos.mod20)[order(Bos$dis)],col='blue',type='l')
+```
+
+
+*(c)* Perform cross-validation or another approach to select the optimal degree for the polynomial, and explain your results.
+
+### Answer:
+
+  A LOOCV is performed for the quadratic models with degrees 1 to 10. The MSE of each quadratic fit is calculated and presented in the table below. The MSE values and plot between polynomial degree and associated polynomial degree show that quadratic fir of order 3 has the lowest MSE of 0.00387 and best explains the relationship between the mean distance and the nitric oxide concentration. The plot the polynomial fit of order 3 confirms the relationship.
+
+```{r Code Chunk-14}
+set.seed(202110)
+# Creating a empty dataframe 
+Bos.mod.dat2<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Degree","MSE")
+colnames(Bos.mod.dat2)<-colname
+# Running a for loop for polynomials of dis variable
+for (i in 1:10){
+  Bos.mod3<-glm(nox ~ poly(dis,i),data=Bos)
+  Bos.mod.dat2[i,1] <- i
+  Bos.mod.dat2[i,2] <- cv.glm(Bos,Bos.mod3,K=506)$delta[1]
+}
+kable(Bos.mod.dat2, caption="LOOCV Errors for Quadratic fit of Boston Data")
+cat("\nDegree at which Lowest MSE observed:",Bos.mod.dat2$Degree[Bos.mod.dat2$MSE==min(Bos.mod.dat2$MSE)])
+cat("\n\nLowest MSE observed:",min(Bos.mod.dat2$MSE))
+```
+```{r Code Chunk-15}
+plot(MSE~Degree,data=Bos.mod.dat2,type = "b", pch=16,col="blue",xlab=" Polynomial Degree",ylab="MSE",main="Polynomial Degree vs Cross Validation Error: Quadratic Fit",cex.main=0.8,cex.lab=0.8)
+abline(v=Bos.mod.dat2$Degree[Bos.mod.dat2$MSE==min(Bos.mod.dat2$MSE)], col="red")
+```
+
+```{r Code Chunk-16}
+# Scatter plot of nox vs dis
+plot(nox~dis,data=Bos,xlab="Mean Distance",ylab="Nitric Oxide Concentration",main="Scatter plot with cubic fit: Boston Data",cex.main=0.9)
+lines(sort(Bos$dis),predict(Bos.mod1)[order(Bos$dis)],col='green',type='l')
+
+```
+
+*(d)* Use the bs() function to fit a regression spline to predict nox using dis. Report the output for the fit using four degrees of freedom. How did you choose the knots? Plot the resulting fit.
+
+### Answer:
+
+  Regression spline was fit for Boston Dataset with Nitrogen Oxide concentration as response variable and Weighted mean distance as predictor variable using *bs()* function from *splines2* package.
+  I picked the position of knots where the function might vary most rapidly and placed fewer knots at the extremes where the function is more stable. I have tried different set of knots like (2,6,9),(3,6,9) etc but I have picked (3,4,8) knots as they give the better fit compared to others.A degree of freedom of 4 and knots at 3,4,8 were used for this fit.The resultant fit is plotted.
+  I also fit a regression spline with just degrees of freedom as 4 (which leads to 3 internal knots) with no specific knots (default knots are at 25th,50th and 75th percentile) and fit the line over the scatter plot.
+  Both the plot with (4 df+K knots) and without (4 df) the knots look vary similar. However I chose to pick the fit with 4 degrees of freedom and knots at (3,5,8) as this fit has lower residual error (0.06102) and Adjusted R square (0.7227) compared to other fit (0.06195 and 0.7142 respectively).
+
+
+```{r Code Chunk-17}
+set.seed(202110)
+#regression spline fit with df=4 +3 knots
+spline.bos1 <- lm(nox ~ splines::bs(dis,df = 4, knots=c(3,5,8)), data = Bos)
+# Summary of the model
+cat("\nSummary of the Regression spline fit with df=4 and Knots=(3,5,8):\n")
+summary(spline.bos1)
+#creating a seq grid for dis variable to be used in the fit
+dislims<-range(Bos$dis)
+dis.grid<-seq(from=dislims[1], to = dislims[2])
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Smoothing Spline fit with df=4 & Knots=(3,5,8)",cex.main=0.85)
+points(dis.grid, predict(spline.bos1,
+                newdata=list(dis=dis.grid)),col="darkgreen",lwd=2,
+                type="l")
+abline(v=c(3,5,8),lty=2,col="darkgreen")
+```
+
+```{r Code Chunk-18}
+set.seed(202110)
+# Regression spline fit with df=4
+spline.bos2 <- lm(nox ~ splines::bs(dis,df = 4), data = Bos)
+# Summary of the model
+cat("\nSummary of the Regression spline fit with df=4:\n")
+summary(spline.bos2)
+dislims<-range(Bos$dis)
+dis.grid<-seq(from=dislims[1], to = dislims[2])
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Smoothing Spline fit with df=4 & Interior knots at 25th,50th,75th percentile",cex.main=0.75)
+points(dis.grid, predict(spline.bos2,
+                newdata=list(dis=dis.grid)),col="darkgreen",lwd=2,
+                type="l")
+#abline(v=c(3,5,8),lty=2,col="darkgreen")
+```
+
+*(e)* Now fit a regression spline for a range of degrees of freedom, and plot the resulting fits and report the resulting RSS. Describe the results obtained.
+
+### Answer:
+
+  A regression spline is fit for a range of degrees of freedom if 1 to 10 (similar to number of polynomial degrees picked for question 2b). The resulting RSS of all the fits are calculated and reported in the below table. As the number of degrees of freedom increased from 0 to 1 RSS reduced. However, the reduction in RSS not substantial. The fit with 10 degrees of freedom has the lowest RSS of 199.9979. From the plots we can see than from degrees of freedom 1 through 4 the fit looks more smoother towards to smaller values of dis compared to the other fits. However the remaining portion of fit looks similar for all the fits with different degrees of freedom.
+
+```{r Code Chunk-19}
+set.seed(202110)
+# Creating a empty dataframe 
+spline.mod.dat<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("df","RSS")
+colnames(spline.mod.dat)<-colname
+# Running a for loop for different degrees of freedom
+for (i in 1:10){
+  spline.bos3<-lm(nox ~ splines::bs(dis,df = i), data = Bos)
+  Bos.pred3<- predict(spline.bos3)
+  spline.mod.dat[i,1] <- i
+  spline.mod.dat[i,2] <- sum(Bos$nox-Bos.pred3^2)
+}
+cat("\nRegression Spline model used for Boston data:\n\n")
+summary(spline.bos3)$call
+kable(spline.mod.dat, caption="Residual Sum of Squares for Regression Spline fit of Boston Data")
+cat("\nDegrees of Freedom at which Lowest RSS is observed:",spline.mod.dat$df[spline.mod.dat$RSS==min(spline.mod.dat$RSS)])
+cat("\n\nLowest RSS observed:",min(spline.mod.dat$RSS))
+
+plot(RSS~df,data=spline.mod.dat,type = "b", pch=16,col="blue",xlab=" Degrees of Freedom",ylab="RSS",main="Degrees of Freedom vs Residual Sum of Squares: Regression Spline Fit",cex.main=0.8,cex.lab=0.8)
+abline(v=spline.mod.dat$df[spline.mod.dat$RSS==min(spline.mod.dat$RSS)], col="red")
+```
+```{r Code Chunk-20, fig.width=10,fig.height=15}
+par(mfrow=c(5,2))
+spline.bos31<-lm(nox ~ splines::bs(dis,df = 1), data = Bos)
+spline.bos32<-lm(nox ~ splines::bs(dis,df = 2), data = Bos)
+spline.bos33<-lm(nox ~ splines::bs(dis,df = 3), data = Bos)
+spline.bos34<-lm(nox ~ splines::bs(dis,df = 4), data = Bos)
+spline.bos35<-lm(nox ~ splines::bs(dis,df = 5), data = Bos)
+spline.bos36<-lm(nox ~ splines::bs(dis,df = 6), data = Bos)
+spline.bos37<-lm(nox ~ splines::bs(dis,df = 7), data = Bos)
+spline.bos38<-lm(nox ~ splines::bs(dis,df = 8), data = Bos)
+spline.bos39<-lm(nox ~ splines::bs(dis,df = 9), data = Bos)
+spline.bos30<-lm(nox ~ splines::bs(dis,df = 10), data = Bos)
+
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Regression Spline fit with 1 degrees of freedom")
+
+points(dis.grid, predict(spline.bos31,
+                newdata=list(dis=dis.grid)),col="darkgreen",lwd=2,
+                type="l")
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Regression Spline fit with 2 degrees of freedom")
+points(dis.grid, predict(spline.bos32,
+                newdata=list(dis=dis.grid)),col="red",lwd=2,
+                type="l")
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Regression Spline fit with 3 degrees of freedom")
+
+points(dis.grid, predict(spline.bos33,
+                newdata=list(dis=dis.grid)),col="blue",lwd=2,
+                type="l")
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Regression Spline fit with 4 degrees of freedom")
+points(dis.grid, predict(spline.bos34,
+                newdata=list(dis=dis.grid)),col="green",lwd=2,
+                type="l")
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Regression Spline fit with 5 degrees of freedom")
+points(dis.grid, predict(spline.bos35,
+                newdata=list(dis=dis.grid)),col="darkblue",lwd=2,
+                type="l")
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Regression Spline fit with 6 degrees of freedom")
+points(dis.grid, predict(spline.bos36,
+                newdata=list(dis=dis.grid)),col="black",lwd=2,
+                type="l")
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Regression Spline fit with 7 degrees of freedom")
+points(dis.grid, predict(spline.bos37,
+                newdata=list(dis=dis.grid)),col="orange",lwd=2,
+                type="l")
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Regression Spline fit with 8 degrees of freedom")
+points(dis.grid, predict(spline.bos38,
+                newdata=list(dis=dis.grid)),col="brown",lwd=2,
+                type="l")
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Regression Spline fit with 9 degrees of freedom")
+points(dis.grid, predict(spline.bos39,
+                newdata=list(dis=dis.grid)),col="pink",lwd=2,
+                type="l")
+plot(Bos$nox~Bos$dis, xlab = "Mean Distance", ylab = "Nitric Oxide Concentration",main="Regression Spline fit with 10 degrees of freedom")
+points(dis.grid, predict(spline.bos30,
+                newdata=list(dis=dis.grid)),col="green",lwd=2,
+                type="l")
+#legend("topright",c("df=1","df=2","df=3","df=4","df=5","df=6","df=7","df=8","df=9","df=10"),col=c("darkgreen","red","blue","green","darkblue","black","orange","brown","pink","grey"),lwd=2,ncol=2,cex=0.7)
+```
+
+*(f)* Perform cross-validation or another approach in order to select the best degrees of freedom for a regression spline on this data.Describe your results.
+
+### Answer:
+
+   Leave One Out Cross Validation was performed for all the fits with degrees of freedom 1 to 10.The MSE of all the fits was calculated and tabulated below. The MSE of the fits decreases with increasing degrees of freedom that can be clearly observed in the plot. A lowest MSE of 0.00369 is observed with a df of 10.
+
+```{r Code Chunk-21}
+set.seed(202110)
+# Creating a empty dataframe 
+spline.mod.dat2<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("df","MSE")
+colnames(spline.mod.dat2)<-colname
+# Running a for loop for different degrees of freedom
+for (i in 1:10){
+  spline.bos4<-glm(nox ~ splines::bs(dis,df = i), data = Bos)
+  spline.mod.dat2[i,1] <- i
+  spline.mod.dat2[i,2] <- cv.glm(Bos,spline.bos4)$delta[1]
+}
+kable(spline.mod.dat2, caption="LOOCV Errors for Regression spline fit of Boston Data")
+cat("\nDegrees of freedom at which Lowest MSE is observed:",spline.mod.dat2$df[spline.mod.dat2$MSE==min(spline.mod.dat2$MSE)])
+cat("\n\nLowest MSE observed:",min(spline.mod.dat2$MSE))
+```
+```{r Code Chunk-22}
+plot(MSE~df,data=spline.mod.dat2,type = "b", pch=16,col="blue",xlab=" Degrees of Freedom",ylab="MSE",main="Degrees of Freedom vs Cross Validation Error (LOOCV): Regression Spline Fit",cex.main=0.8,cex.lab=0.8)
+abline(v=spline.mod.dat2$df[spline.mod.dat2$MSE==min(spline.mod.dat2$MSE)], col="red")
+```
+
+### References
+
+- RDocumentation by DataCamp *bs: B-Spline Basic for polynomial Splines*
+- Blogpost by stackoverflow, *bs() fucntion not found*.
+- Blogpost by datascience+, *Cubic and Smoothing Splines in R*, April 4,2018.
+- Chapter 7,Moving Beyond Linearity,*An Introduction to Statistical Learning with Applications in R* by Gareth James.
+
