@@ -1,0 +1,604 @@
+---
+title: "Homework 9"
+author: "Snigdha Peddi"
+output:
+  word_document: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=F,warning=F,echo=F,fig_height=10,fig_width=7,cache = F)
+```
+
+```{r libraries}
+#install.packages("ISLR")
+library(ISLR)
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("knitr")
+library(knitr)
+#install.packages("tidyr")
+library(tidyr)
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("GGally")
+library(GGally)
+#install.packages("MASS")
+library(MASS)
+#install.packages("purrr")
+library(purrr)
+#install.packages("mclust")
+library(mclust)
+#install.packages('class')
+library(class)
+#install.packages('blorr')
+library(blorr)
+#install.packages('caTools')
+library("caTools")
+#install.packages('caret')
+library("caret")
+#install.packages('Boot')
+library("boot")
+#install.packages('glmnet')
+library(glmnet)
+```
+## Exercises (ISLR)
+
+### Use set.seed(20219) in each exercise to make results reproducible.
+
+### 1. Question 6.8.3 pg 260, Suppose we estimate the regression coefficients in a linear regression model by minimizing below equation for a particular value of s. For parts (a) through (e), indicate which of i. through v. is correct. Justify your answer.
+
+$$\sum_{i=1}^{n} (y_i-\beta_0-\sum_{j=1}^{p}\beta_jx_{ij})$$
+Subject to
+
+$$ \sum_{j=1}^{p}|\beta_j|\le{s}$$
+
+**(a)** As we increase s from 0, the training RSS will:
+
+i. Increase initially, and then eventually start decreasing in an inverted U shape.
+ii. Decrease initially, and then eventually start increasing in a U shape.
+iii. Steadily increase.
+iv. Steadily decrease.
+v. Remain constant.
+
+### Answer:
+
+The answer is option III, Steadily decreases.
+
+As s increases from 0 and becomes large then coefficient estimates can be large (large slope) resulting in lower Residual sum of squares (lasso regression line can be closer to the linear regression line). When s is sufficiently large then RSS+lasso penalty becomes equal to RSS. Hence with increase in s the RSS decreases. 
+ The Lambda and s are related such that increase in lambda corresponds to decrease in s. From the plot illustrating the relation between lambda and RSS shows that with increase in lambda the RSS increases and reaches a point where the RSS remains constant.This indicates  that increase in s will decrease the RSS and at a value of s it becomes equal to the least square solution.
+
+```{r Code Chunk-1}
+set.seed(20219)
+xs <- sort(rep(seq(0.15, .5, .005), 1))
+E.ys <- 3 * sin(1 / xs)
+ys <- E.ys + rnorm(length(xs), 0, 2)
+```
+
+```{r Code Chunk-2}
+set.seed(20219)
+# Plotting xs and ys and adding the linear model to the plot
+plot(xs, ys, type = "p", ylim=c(-6, 6), pch=16, xlab="Predictor",ylab="Response",cex = .7,main="Linear model of Train Set",cex.main=0.8,cex.lab=0.8)
+lm.mod1 = lm(ys ~ poly(xs, 25))
+points(xs, predict(lm.mod1), pch = 16, col = "red", cex = .7)
+
+# Selecting a 100 lambda values between 0 and 10
+grid <- seq(10, 0, length = 100)
+
+# Creating a empty dataframe 
+data.lasso<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Lambda","RSS")
+colnames(data.lasso)<-colname
+
+# for 100 values of lambda fitting a lasso regression line and calculating the RSS for each lambda
+
+for (i in 1:100){
+  lasso.mod <- glmnet(poly(xs, 25), ys, alpha = 1, lambda = grid[i])
+  lasso.pred<- cbind(1, poly(xs, 25, simple = T)) %*% coef(lasso.mod)
+  data.lasso[i,1]<-grid[i]
+  data.lasso[i,2]<-sum((ys-lasso.pred)^2)
+}
+
+# Plotting Lambda vs RSS
+
+plot(data.lasso$Lambda,data.lasso$RSS,type = "p", pch=16,col="blue",xlab="Lambda",ylab="RSS",cex = .7,main="Effect of Lambda on RSS using Lasso Regression:Train set",cex.main=0.8,cex.lab=0.8)
+
+```
+
+**(b)** Repeat (a) for test RSS.
+
+i. Increase initially, and then eventually start decreasing in an inverted U shape.
+ii. Decrease initially, and then eventually start increasing in a U shape.
+iii. Steadily increase.
+iv. Steadily decrease.
+v. Remain constant.
+
+### Answer:
+
+The answer is option II, Decrease initially, and then eventually start increasing in a U shape.
+
+With increase in S the flexibility of model increases, RSS decreases initially and then increases until a point where the model overfits.
+
+```{r Code Chunk-3}
+set.seed(20219)
+# Plotting xs and E.ys and adding the linear model to the plot
+#plot(xs, E.ys, type = "p", ylim=c(-6, 6), pch=16, xlab="Predictor",ylab="Response",main="Linear model of Test",cex.main=0.8,cex.lab=0.8)
+#lm.mod2 = lm(E.ys ~ poly(xs, 25))
+#points(xs, predict(lm.mod2), pch = 16, col = "red", cex = .7)
+
+# Selecting a 100 lambda values between 0 and 10
+grid <- seq(0, 10, length = 100)
+
+# Creating a empty dataframe 
+data.lasso.test<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Lambda","RSS")
+colnames(data.lasso.test)<-colname
+
+# for 100 values of lambda fitting a lasso regression line and calculating the RSS for each lambda
+
+for (i in 1:100){
+  lasso.mod1<- glmnet(poly(xs, 25),ys, alpha = 1, lambda = grid[i])
+  lasso.pred1<- cbind(1, poly(xs, 25, simple = T)) %*% coef(lasso.mod1)
+  data.lasso.test[i,1]<-grid[i]
+  data.lasso.test[i,2]<-sum((E.ys-lasso.pred1)^2)
+}
+
+# Plotting Lambda vs RSS
+
+plot(data.lasso.test$Lambda,data.lasso.test$RSS,type = "p", pch=16,col="blue",xlab="Lambda",ylab="RSS",cex = .7,main="Effect of Lambda on RSS using Lasso Regression:Test Set",cex.main=0.8,cex.lab=0.8)
+abline(v=data.lasso.test$Lambda[data.lasso.test$RSS==min(data.lasso.test$RSS)], col="red")
+
+
+```
+
+**(c)** Repeat (a) for variance.
+
+i. Increase initially, and then eventually start decreasing in an inverted U shape.
+ii. Decrease initially, and then eventually start increasing in a U shape.
+iii. Steadily increase.
+iv. Steadily decrease.
+v. Remain constant.
+
+### Answer:
+
+The answer is option III, Steadily increase.
+
+With increase in s from 0 model flexibility is increasing (corresponding to decrease in lambda). The bias is decreasing and the variance increases.When s is sufficiently large then the coefficient estimate becomes equal to least square solution then the variance remains constant.
+
+```{r Code Chunk-4}
+set.seed(20219)
+
+# Selecting a 100 lambda values between 0 and 10
+grid <- seq(0, 10, length = 100)
+
+# Creating a empty dataframe 
+data.lasso.var<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Lambda","RSS")
+colnames(data.lasso.var)<-colname
+
+# for 100 values of lambda fitting a lasso regression line and calculating the RSS for each lambda
+
+for (i in 1:100){
+  lasso.mod1<- glmnet(poly(xs, 25),ys, alpha = 1, lambda = grid[i])
+  lasso.pred1<- cbind(1, poly(xs, 25, simple = T)) %*% coef(lasso.mod1)
+  data.lasso.var[i,1]<-grid[i]
+  data.lasso.var[i,2]<-sum((E.ys-lasso.pred1)^2)-sum((ys-lasso.pred1)^2)
+}
+
+# Plotting Lambda vs Variance
+
+plot(data.lasso.var$Lambda,data.lasso.var$RSS,type = "p", pch=16,col="blue",xlab="Lambda",ylab="Variance",cex = .7,main="Effect of Lambda on Variance using Lasso Regression",cex.main=0.8,cex.lab=0.8)
+
+```
+
+**(d)** Repeat (a) for (squared) bias.
+
+i. Increase initially, and then eventually start decreasing in an inverted U shape.
+ii. Decrease initially, and then eventually start increasing in a U shape.
+iii.Steadily increase.
+iv. Steadily decrease.
+v. Remain constant.
+
+### Answer:
+
+The answer is option IV, Steadily decrease.
+
+As the s increases from 0 the lasso regression line is close to linear regression line and hence has a low bias.The plot below shows that with increase in lambda bias increases which corresponds to decrease in bias with increasing s. And bias remains constant when s is sufficiently large where RSS is equal to least squares solution.
+
+```{r Code Chunk-5}
+set.seed(20219)
+
+# Selecting a 100 lambda values between 0 and 10
+grid <- seq(0, 10, length = 100)
+
+# Creating a empty dataframe 
+data.lasso.bias<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Lambda","RSS")
+colnames(data.lasso.bias)<-colname
+
+# for 100 values of lambda fitting a lasso regression line and calculating the squared bias for each lambda
+
+for (i in 1:100){
+  lasso.mod1<- glmnet(poly(xs, 25),ys, alpha = 1, lambda = grid[i])
+  lasso.pred1<- cbind(1, poly(xs, 25, simple = T)) %*% coef(lasso.mod1)
+  data.lasso.bias[i,1]<-grid[i]
+  data.lasso.bias[i,2]<-sum(ys^2-lasso.pred1^2)
+}
+
+# Plotting Lambda vs Variance
+
+plot(data.lasso.bias$Lambda,data.lasso.bias$RSS,type = "p", pch=16,col="blue",xlab="Lambda",ylab="Squared Bias",cex = .7,main="Effect of Lambda on Squared Bias using Lasso Regression",cex.main=0.8,cex.lab=0.8)
+
+```
+
+**(e)** Repeat (a) for the irreducible error.
+
+i. Increase initially, and then eventually start decreasing in an inverted U shape.
+ii. Decrease initially, and then eventually start increasing in a U shape.
+iii.Steadily increase.
+iv. Steadily decrease.
+v. Remain constant.
+
+### Answer:
+
+The answer is option V, Remain constant.
+
+Irreducible error is a noiSe in the system which may be due to the unexplained independent variables or response variation. Changing the flexibility of the system does not change the error and changes in S (lambda) do not effect the error and remains constant.
+
+### 2. Question 6.8.4 pg 260,  Suppose we estimate the regression coefficients in a linear regression model by minimizing below equation for a particular value of λ. For parts (a) through (e), indicate which of i. through v. is correct. Justify your answer.
+
+$$\sum_{i=1}^{n} (y_i-\beta_0-\sum_{j=1}^{p}\beta_jx_{ij}) +\lambda\sum_{j=1}^{p}\beta^2_j$$
+
+**(a)** As we increase λ from 0, the training RSS will:
+
+i. Increase initially, and then eventually start decreasing in an inverted U shape.
+ii. Decrease initially, and then eventually start increasing in a U shape.
+iii. Steadily increase.
+iv. Steadily decrease.
+v. Remain constant.
+
+### Answer:
+
+The answer is option III, Steadily increases.
+
+As the Lambda increases the residual sum of squares and ridge penalty decreases. The RSS increases as the bias is introduced into the system and reducing the slope of the linear model.
+
+```{r Code Chunk-6}
+set.seed(20219)
+# Plotting xs and ys and adding the linear model to the plot
+plot(xs, ys, type = "p", ylim=c(-6, 6), pch=16, xlab="Predictor",ylab="Response",cex = .7,main="Linear model of Train Set",cex.main=0.8,cex.lab=0.8)
+lm.mod1 = lm(ys ~ poly(xs, 25))
+points(xs, predict(lm.mod1), pch = 16, col = "red", cex = .7)
+
+# Selecting a 100 lambda values between 0 and 10
+grid <- seq(0, 10, length = 100)
+
+# Creating a empty dataframe 
+data.ridge<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Lambda","RSS")
+colnames(data.ridge)<-colname
+
+# for 100 values of lambda fitting a ridge regression line and calculating the RSS for each lambda
+
+for (i in 1:100){
+  ridge.mod <- glmnet(poly(xs, 25), ys, alpha = 0, lambda = grid[i])
+  ridge.pred<- cbind(1, poly(xs, 25, simple = T)) %*% coef(ridge.mod)
+  data.ridge[i,1]<-grid[i]
+  data.ridge[i,2]<-sum((ys-ridge.pred)^2)
+}
+
+# Plotting Lambds vs RSS
+
+plot(data.ridge$Lambda,data.ridge$RSS,type = "p", pch=16,col="blue",xlab="Lambda",ylab="RSS",cex = .7,main="Effect of Lambda on RSS using Ridge Regression:Train set",cex.main=0.8,cex.lab=0.8)
+
+```
+
+**(b)** Repeat (a) for test RSS.
+
+i. Increase initially, and then eventually start decreasing in an inverted U shape.
+ii. Decrease initially, and then eventually start increasing in a U shape.
+iii. Steadily increase.
+iv. Steadily decrease.
+v. Remain constant.
+
+### Answer:
+
+The answer is option II, Decrease initially, and then eventually start increasing in a U shape.
+
+As the Lambda increases the residual sum of squares and ridge penalty decreases and thereafter increases as the model becomes overfit beyond a certain lambda value.There is bias variance trade off. At a Lambda of 0.81 the RSS is at lowest and thereafter the Bias increases.
+
+```{r Code Chunk-7}
+set.seed(20219)
+# Plotting xs and E.ys and adding the linear model to the plot
+#plot(xs, E.ys, type = "p", ylim=c(-6, 6), pch=16, xlab="Predictor",ylab="Response",main="Linear model of Test",cex.main=0.8,cex.lab=0.8)
+#lm.mod2 = lm(E.ys ~ poly(xs, 25))
+#points(xs, predict(lm.mod2), pch = 16, col = "red", cex = .7)
+
+# Selecting a 100 lambda values between 0 and 10
+grid <- seq(0, 10, length = 100)
+
+# Creating a empty dataframe 
+data.ridge.test<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Lambda","RSS")
+colnames(data.ridge.test)<-colname
+
+# for 100 values of lambda fitting a ridge regression line and calculating the RSS for each lambda
+
+for (i in 1:100){
+  ridge.mod1<- glmnet(poly(xs, 25),ys, alpha = 0, lambda = grid[i])
+  ridge.pred1<- cbind(1, poly(xs, 25, simple = T)) %*% coef(ridge.mod1)
+  data.ridge.test[i,1]<-grid[i]
+  data.ridge.test[i,2]<-sum((E.ys-ridge.pred1)^2)
+}
+
+# Extracting Lambda with lower RSS
+kable(cbind(Lambda=round(data.ridge.test$Lambda[data.ridge.test$RSS==min(data.ridge.test$RSS)],3),
+            RSS=round(min(data.ridge.test$RSS),3)),caption="Lamda with lower RSS")
+
+# Plotting Lambda vs RSS
+
+plot(data.ridge.test$Lambda,data.ridge.test$RSS,type = "p", pch=16,col="blue",xlab="Lambda",ylab="RSS",cex = .7,main="Effect of Lambda on RSS using Ridge Regression:Test Set",cex.main=0.8,cex.lab=0.8)
+abline(v=data.ridge.test$Lambda[data.ridge.test$RSS==min(data.ridge.test$RSS)], col="red")
+
+
+```
+
+**(c)** Repeat (a) for variance.
+
+i. Increase initially, and then eventually start decreasing in an inverted U shape.
+ii. Decrease initially, and then eventually start increasing in a U shape.
+iii. Steadily increase.
+iv. Steadily decrease.
+v. Remain constant.
+
+### Answer:
+
+The answer is option IV, Steadily decrease.
+
+As the Lambda increases the residual sum of squares and ridge penalty decreases shrinking the value of coefficient reducing the variance.
+
+```{r Code Chunk-8}
+set.seed(20219)
+
+# Selecting a 100 lambda values between 0 and 10
+grid <- seq(0, 10, length = 100)
+
+# Creating a empty dataframe 
+data.ridge.var<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Lambda","RSS")
+colnames(data.ridge.var)<-colname
+
+# for 100 values of lambda fitting a ridge regression line and calculating the RSS for each lambda
+
+for (i in 1:100){
+  ridge.mod1<- glmnet(poly(xs, 25),ys, alpha = 0, lambda = grid[i])
+  ridge.pred1<- cbind(1, poly(xs, 25, simple = T)) %*% coef(ridge.mod1)
+  data.ridge.var[i,1]<-grid[i]
+  data.ridge.var[i,2]<-sum((E.ys-ridge.pred1)^2)-sum((ys-ridge.pred1)^2)
+}
+
+# Plotting Lambda vs Variance
+
+plot(data.ridge.var$Lambda,data.ridge.var$RSS,type = "p", pch=16,col="blue",xlab="Lambda",ylab="Variance",cex = .7,main="Effect of Lambda on Variance using Ridge Regression",cex.main=0.8,cex.lab=0.8)
+
+```
+
+**(d)** Repeat (a) for (squared) bias.
+
+i. Increase initially, and then eventually start decreasing in an inverted U shape.
+ii. Decrease initially, and then eventually start increasing in a U shape.
+iii.Steadily increase.
+iv. Steadily decrease.
+v. Remain constant.
+
+### Answer:
+
+The answer is option III, Steadily increase.
+
+As the Lambda increases the residual sum of squares and ridge penalty decreases,decreasing the flexibility by introducing bias(shrinking the coefficient values).
+
+```{r Code Chunk-9}
+set.seed(20219)
+
+# Selecting a 100 lambda values between 0 and 10
+grid <- seq(0, 10, length = 100)
+
+# Creating a empty dataframe 
+data.ridge.bias<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Lambda","RSS")
+colnames(data.ridge.bias)<-colname
+
+# for 100 values of lambda fitting a ridge regression line and calculating the squared bias for each lambda
+
+for (i in 1:100){
+  ridge.mod1<- glmnet(poly(xs, 25),ys, alpha = 0, lambda = grid[i])
+  ridge.pred1<- cbind(1, poly(xs, 25, simple = T)) %*% coef(ridge.mod1)
+  data.ridge.bias[i,1]<-grid[i]
+  data.ridge.bias[i,2]<-sum(ys^2-ridge.pred1^2)
+}
+
+# Plotting Lambda vs Variance
+
+plot(data.ridge.bias$Lambda,data.ridge.bias$RSS,type = "p", pch=16,col="blue",xlab="Lambda",ylab="Squared Bias",cex = .7,main="Effect of Lambda on Squared Bias using Ridge Regression",cex.main=0.8,cex.lab=0.8)
+
+```
+
+**(e)** Repeat (a) for the irreducible error.
+
+i. Increase initially, and then eventually start decreasing in an inverted U shape.
+ii. Decrease initially, and then eventually start increasing in a U shape.
+iii.Steadily increase.
+iv. Steadily decrease.
+v. Remain constant.
+
+### Answer:
+
+The answer is option V, Remain constant.
+
+Irreducible error is a noiSe in the system which may be due to the unexplained independent variables or response variation. Changing the flexibility of the system does not change the error and changes in lambda do not effect the error and remains constant.
+
+**3. We will now try to predict permeability in the *rock* data set.**
+
+```{r Code Chunk-10}
+rok<-rock
+#head(rok)
+#Dimensions of Rock data
+cat("\nDimensions of Rock dataset:",dim(rok))
+```
+
+
+**a)** Use lasso and ridge regression methods to fit the model:
+
+$$permeability \sim area + perimeter + shape$$
+
+Compare the two methods. Present and discuss results for the two approaches.
+
+### Answer:
+
+  *glmnet()* function is used to fit the Ridge and Lasso regression models.The Mean square error was calculated for all the lambda values and the lambda at which the MSE is lower was identified for both the models.Both the models gave a best MSE at lambda of 1. However, the ridge method has a better MSE of 55489.9 compared to 55492.1 of lasso regression. This indicates that all the variables used for the models are useful.In both cases as the lambda increases the MSE increases. At around a lambda of 15 for ridge fit and 6 for lasso fit the MSE became consistent with increasing lambda indicating that the coefficient estimates are not sensitive to independent variables.
+
+```{r Code Chunk-11}
+#Setting seed for reproducibility of data
+set.seed(20219)
+#Converting the dataframe of independent variables to Matrix
+rok.x<-as.matrix(rok[,1:3])
+rok.y<-rok[,4]
+
+# Selecting a 100 lambda values between 0 and 10
+grid <-10^seq(0, 10, length = 100)
+
+# Creating a empty dataframe 
+data.rok<- data.frame(matrix(ncol = 3, nrow = 0))
+colname<-c("Lambda","mse","RSS")
+colnames(data.rok)<-colname
+
+# for 100 values of lambda fitting a ridge regression line and calculating the mse for each lambda
+
+for(i in 1:100){
+  rok.mod <- glmnet(rok.x, rok.y, alpha = 0, standardize = TRUE,lambda=grid[i])
+  rok.pred<- predict(rok.mod,newx=rok.x)
+  data.rok[i,1]<-grid[i]
+  data.rok[i,2]<-mean((rok.y-rok.pred)^2)
+  data.rok[i,3]<-mean((rok.y^2-rok.pred^2))
+}
+
+#Plotting Lambda vs MSE
+
+plot(log(data.rok$Lambda),data.rok$mse,type = "p", pch=16,col="blue",xlab=" Log Lambda",ylab="MSE",cex = .7,main="Effect of Lambda on MSE using Ridge Regression",cex.main=0.8,cex.lab=0.8)
+abline(v=data.rok$Lambda[data.rok$mse==min(data.rok$mse)], col="red")
+
+#Model
+cat("Ridge Regression Model for Rock Data:\n\n")
+rok.mod$call
+cat("\n")
+
+# Finding the the lambda at which the MSE is minimum
+cat("The MSE of the Ridge Regression model at the best Lambda:",min(data.rok$mse))
+cat("\n\nLabmda with lower MSE(Ridge Regression Fit):",data.rok$Lambda[data.rok$mse==min(data.rok$mse)])
+```
+
+```{r Code Chunk-12}
+#Setting seed for reproducibility
+set.seed(20219)
+
+# Selecting a 100 lambda values between 0 and 10
+grid <-10^seq(0, 10, length = 100)
+
+# Creating a empty dataframe 
+data.rok1<- data.frame(matrix(ncol = 2, nrow = 0))
+colname<-c("Lambda","mse")
+colnames(data.rok1)<-colname
+
+# for 100 values of lambda fitting a lasso regression line and calculating the mse for each lambda
+
+for(i in 1:100){
+  rok.mod1 <- glmnet(rok.x, rok.y, alpha = 1, standardize = TRUE,lambda=grid[i])
+  rok.pred1<- predict(rok.mod1,newx=rok.x)
+  data.rok1[i,1]<-grid[i]
+  data.rok1[i,2]<-mean((rok.y-rok.pred1)^2)
+}
+
+#head(data.rok)
+#Plotting Lambda vs RSS
+
+plot(log(data.rok1$Lambda),data.rok1$mse,type = "p", pch=16,col="blue",xlab="Log Lambda",ylab="mse",cex = .7,main="Effect of Lambda on MSE using Lasso Regression",cex.main=0.8,cex.lab=0.8)
+abline(v=data.rok1$Lambda[data.rok1$mse==min(data.rok1$mse)], col="red")
+
+#Model
+cat("Lasso Regression Model for Rock Data:\n\n")
+rok.mod1$call
+cat("\n")
+
+# Finding the the lambda at which the MSE is minimum
+cat("The MSE of the Lasso Regression model at the best Lambda:",min(data.rok1$mse))
+cat("\n\nLabmda with lower MSE(Lasso Regression Fit):",data.rok1$Lambda[data.rok1$mse==min(data.rok1$mse)])
+```
+
+**b)**Evaluate model performance of both lasso and ridge regression using validation set error, cross validation, or some other reasonable alternative, as opposed to using training error. State explicitly which method you choose to evaluate the error and justify your choice. 
+
+### Answer:
+
+  I have used Leave One Out Cross Validation to evaluate my models as the number of observations in the Rock data are less (48). I have used LOOCV to reduce the bias and randomness as LOOCV yields same results when performed multiple times.
+  I have used cv.glmnet() function to perform the LOOCV for both the models. I have standardized the x variables prior to fitting the models as the values of the independent variables are at different scale. A grid of lambda is pre-selected for the models.
+  The Ridge regression fit has a lower MSE of 79326 (achieved at a lambda of 10.2) compared to the MSE of Lasso regression fit which is 80419 (achieved at a lambda of 1).Plots of both the models show the same trend. As the lambda increases the MSE increases and plateaus out where the effect of the independent variables is not significant on the response variable. 
+  The model summaries also show that for Lasso fit, at the lambda that gives the most regularized model where the MSE is within one standard deviation the number of variables with zero coefficients is 2.
+  After evaluating the models with LOOCV I beleive that Ridge regression fit is better than Lasso regression Fit.
+  
+```{r Code Chunk-13}
+set.seed(20219)
+rok.x<-as.matrix(rok[,1:3])
+rok.y<-rok[,4]
+
+# Fitting Ridge regression Line using LOOCV and a set lambda
+rok.mod.alpha0<- cv.glmnet(rok.x, rok.y, alpha = 0, standardize = TRUE,type.measure="mse",family="gaussian",nfolds=length(rok.y),lambda=10^seq(0,10,length=100))
+# Printing the ridge regression model
+cat("Ridge regression Fit for Rock data and LOOCV:\n")
+print(rok.mod.alpha0)
+# Plotting the ridge regression model
+plot(rok.mod.alpha0)
+title(sub="Effect of Lambda on MSE:Ridge Regression Fit",cex.main=0.9)
+cat("\n")
+# Fitting Lasso regression Line using LOOCV and a set lambda
+rok.mod.alpha1<- cv.glmnet(rok.x, rok.y, alpha = 1, standardize = TRUE,type.measure="mse",family="gaussian",nfolds=length(rok.y),lambda=10^seq(0,10,length=100))
+# Printing the Lasso regression model
+cat("Lasso regression Fit for Rock data and LOOCV:\n")
+print(rok.mod.alpha1)
+# Plotting the Lasso regression model
+plot(rok.mod.alpha1,axis=TRUE)
+title(sub="Effect of Lambda on MSE:Lasso Regression Fit",cex.main=0.9)
+
+```
+
+**c)** Are there issues with the data that would justify the added complexity of the ridge regression? Justify your answer. Consider the residuals from a linear model.
+
+### Answer:
+
+A linear model is fit for the Rock data set. The training MSE is calculated and was estimated to be 55480. The MSE of the Ridge regression fit is 55490. The ridge regression penalty has introduced more bias to the system  and increased the complexity of the model.The lower MSE of the ridge fit is achieved at a lambda of 1.It is introducing very little bias and when lambda is 0 it is essentially equal to the linear fit. The residual values of the linear model are very low compared to ridge regression model. As only 3 variables are used for the model I believe the simple linear model with lower MSE is better then Ridge or Lasso fits.
+
+
+```{r Code Chunk-14}
+# Fitting Linear Regression Model for Rock Data
+lm.mod3<-glm(perm ~ area+peri+shape,data=rock)
+#Summary of Rock Data
+cat("Summary of Linear Model for Rock Data:\n")
+summary(lm.mod3)
+#Predictions made on the original data
+pred<-predict(lm.mod3,rock[,-4])
+#Calculating MSE of the model
+cat("MSE of the Linear model:",mean((rock$perm-pred)^2))
+cat("\n\nThe MSE of the Ridge Regression model(at Lambda=1):",min(data.rok$mse))
+
+```
+```{r Code Chunk-15}
+lm_loocv<-cv.glm(rock,lm.mod3)
+#lm_loocv$delta[1]
+```
+
+### References:
+
+
+- Blog by Trevor Hastie, Junyang Qian, Kenneth Tay on *An Introduction to glmnet*, February 17,2021. 
+- Video Lecture by Josh Starmer (statquest) on *Ridge,Lasso and Elastic-Net Regression in R*, October 23,2018
+- Video Lecture by Experfy on *Learn Lasso and Ridge Regression in R*, December 18,2017.
+- Video Lecture by Josh Starmer (statquest) on *Machine Learning Fundamentals: Bias and Variance*, September 17,2018
+- Video Lecture by Josh Starmer (statquest) on *Regularization Part 1: Ridge(L2) Regression*, September 24,2018
+- Video Lecture by Josh Starmer (statquest) on *Regularization Part 2: Lasso(L1) Regression*, October 1,2018
