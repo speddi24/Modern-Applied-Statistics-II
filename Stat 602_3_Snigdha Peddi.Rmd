@@ -1,0 +1,428 @@
+---
+title: "Homework 3"
+author: "Snigdha Peddi"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F,warning=F,message=F)
+```
+
+```{r libraries}
+#install.packages("ISLR")
+library(ISLR)
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("knitr")
+library(knitr)
+#install.packages("tidyr")
+library(tidyr)
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("GGally")
+library(GGally)
+#install.packages("MASS")
+library(MASS)
+#install.packages("purrr")
+library(purrr)
+```
+
+
+**Question 1:Using a little bit of algebra, prove that (4.2) is equivalent to (4.3). In other words, the logistic function representation and logit representation for the logistic regression model are equivalent.**
+
+Logistic function from 4.2
+
+$$
+p(X)= \frac{e^{\beta_0+\beta_1X}} {1+e^{\beta_0+\beta_1X}}
+$$
+Logit function from 4.3
+
+$$
+\frac{p(X)}{1-p(X)}= {e^{\beta_0+\beta_1X}} 
+$$
+Below equations shows that both the logistic fucntion representation and logit representation are equal,
+
+Subtracting both side of  logistic function equation by 1,
+
+$$
+1-p(X)= 1-(\frac{e^{\beta_0+\beta_1X}} {1+e^{\beta_0+\beta_1X}})
+$$
+$$
+1-p(X)= \frac{{1+e^{\beta_0+\beta_1X}}-e^{\beta_0+\beta_1X}} {1+e^{\beta_0+\beta_1X}}
+$$
+Cancelling out the $e^{\beta_0+\beta_1X}$,
+
+$$
+1-p(X)= \frac{1}{1+e^{\beta_0+\beta_1X}}
+$$
+Rearranging the equation,
+
+$$
+\frac{1}{1-p(X)}= {1+e^{\beta_0+\beta_1X}}
+$$
+Multiplying with the $p(X)$ from logistic function (4.2) on both sides,
+
+$$
+\frac{p(X)}{1-p(X)}= \frac{e^{\beta_0+\beta_1X}} {1+e^{\beta_0+\beta_1X}}({1+e^{\beta_0+\beta_1X}})
+$$
+
+Cancelling out $(1+e^{\beta_0+\beta_1X})$ will equal to,
+
+$$
+\frac{p(X)}{1-p(X)}= {e^{\beta_0+\beta_1X}} 
+$$
+
+Hence, proving both logistic function (4.2) representation and logit (4.3) representation of logistic regression are equal.
+
+**Question 2:This question should be answered using the Weekly data set, which is part of the ISLR package. This data is similar in nature to the Smarket data from this chapter’s lab, except that it contains 1089 weekly returns for 21 years, from the beginning of 1990 to the end of 2010.**
+
+```{r Code Chunk-1}
+# Reading College data from ISLR package
+weekly <- ISLR::Weekly
+#attaching the dataset to the R file
+#attach(weekly)
+
+# Investigating the dimensions, column names and summary of dataset
+cat("\n Dimensions of Weekly dataset:",dim(weekly))
+
+#colnames(weekly)
+
+#head(weekly)
+
+#To check if there are any missing variables
+cat("\n")
+
+cat("\n Number of missing values in Weekly dataset:",weekly %>% is.na() %>% sum())
+
+cat("\n")
+```
+
+**2.a Produce some numerical and graphical summaries of the Weekly data. Do there appear to be any patterns?**
+
+```{r Code Chunk-2}
+# Summary of Data set
+cat("\n Summary of weekly Data: \n\n")
+summary(weekly)
+```
+```{r Code Chunk-3,fig.width=8, fig.height=7}
+# Correlation plot using ggpairs
+ggpairs(weekly,title="Correlation Plot of weekly Data :ggplot")
+```
+
+The correlation plot shows that there is approximately 0 correlation between the Year and all other features except Volume variable which is 0.84.The correlation between the Volume of stocks traded (in Billions) over years can be clearly seen in the plot below. 
+
+```{r Code Chunk-4}
+plot(Volume~Year,data=weekly,
+      ylab="Volume of shares traded in Billions",
+      xlab="Year",
+      main="Correlation plot to show the Volume of shares traded over Years",cex.main=0.75,cex.lab=0.7)
+```
+
+**2.b Use the full data set to perform a logistic regression with Direction as the response and the five lag variables plus Volume as predictors. Use the summary function to print the results. Do any of the predictors appear to be statistically significant? If so, which ones?**
+
+The below model is fit between Direction as response variable and 5 lag variables and volume variable as predictors.
+
+\begin{verbatim}
+reg.mod1<-glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume,
+          data=weekly,family=binomial)
+\end{verbatim}
+
+The summary of the model indicates that only Lag2 variable is statistically significant with a lower p-value of 0.0296.
+
+```{r Code Chunk-5}
+#Removing the Year and Today Variables from Weekly dataset
+#weekly.dat<-weekly[,-c(1,8)]
+#Checking if the data set had properly subset
+#colnames(weekly.dat)
+#Logistic regression of new dataset
+reg.mod1<-glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume,
+              data=weekly,
+              family=binomial)
+#Summary of the model
+summary(reg.mod1)
+```
+
+**2.c Compute the confusion matrix and overall fraction of correct predictions. Explain what the confusion matrix is telling you about the types of mistakes made by logistic regression.**
+
+The predictions for the weekly data are made using the logistic regression model created using Direction as response variable and 5 Lag variables and Volume variable as predictors.The probability values predicted corresponds to the market going. This can be explained by the *contrasts()* function which shows that R has created a dummy variable with a 1 for UP Direction.Then a vector is created where the values with all the probabilities greater than 0.5 are named as "UP" and less than 0.5 are named as "Down". A *table()* function is used to create a confusion matrix to determine the accuracy of the prediction.
+
+```{r Code Chunk-6}
+prob.mod1<- predict(reg.mod1,type="response")
+#Contrasts function indicating the dummy variables created for Direction(response variable)
+cat("\n Contrasts of Direction Variable:\n")
+contrasts(weekly$Direction)
+#Creating a vector with Down elements of length of the response variable from weekly dataset
+pred.mod1<-rep("Down",1089)
+
+#For all the probabilities greater than 0.5 the Down element is converted to UP 
+pred.mod1[prob.mod1>0.5]<-"UP"
+
+#Confusion Matrix
+table(pred.mod1,weekly$Direction)
+
+# Correct predictions
+
+#mean(pred.mod1==weekly$Direction)
+cat("\n Accuracy of prediction:",round((54+557)/1089*100,2),"%")
+
+```
+
+The model has correctly predicted that the market would go down 54 days and it would go up 557 days. It gave an accuracy of 56.11%.In other words there is an 43.89% Training error.
+
+
+**2.d Now fit the logistic regression model using a training data period from 1990 to 2008, with Lag2 as the only predictor. Compute the confusion matrix and the overall fraction of correct predictions for the held out data (that is, the data from 2009 and 2010).**
+
+  A new Logistic Regression Model is fit with Lag2 as predictor variable and Direction as Response variable using the weekly data from Years 1990 to 2008(train data). The weekly data for Years 2009 and 2010 is used as a test data.
+  
+\begin{verbatim}
+reg.mod2<-glm(Direction~Lag2,data=weekly,
+          family=binomial,subset=train)
+\end{verbatim}
+
+Summary of the model shows that Lag2 variable is statistically significant with a p value of 0.04298.
+
+```{r Code Chunk-7}
+set.seed(0302)
+#Creating a Boolean vector for where Year<2009 is TRUE
+train <- weekly$Year<2009
+# Test data with Year>2008
+test<-weekly[!train,]
+#Dimensions of test data
+#cat("Dimensions of test data:\n",dim(test))
+# Response variable of test data
+Direction.test<-weekly$Direction[!train]
+```
+
+```{r Code Chunk-8}
+#Fitting Logistic regression model with Lag2
+reg.mod2<-glm(Direction~Lag2,data=weekly, family=binomial,subset=train)
+#Summary of the model
+summary(reg.mod2)
+```
+
+  Predictions were made on test data using the above logistic regression model.The confusion matrix indicate that there is an 62.5% accuracy in predictions where the model correctly predicts that the market goes Up 56 days and goes Down 9 days out of 61 days and 43 days respectively. However, there is still a test error of 37.5%.
+
+```{r Code Chunk-9}
+prob.mod2<- predict(reg.mod2,test,type="response")
+
+#Creating a vector with Down elements of length of the response variable from test dataset
+pred.mod2<-rep("Down",104)
+
+#For all the probabilities greater than 0.5 the Down element is converted to UP 
+pred.mod2[prob.mod2>0.5]<-"UP"
+
+#Confusion Matrix
+table(pred.mod2,test$Direction)
+
+# Correct predictions
+
+cat("\n Accuracy of prediction:",
+    round((9+56)/length(test$Direction)*100,2),"%")
+
+cat("\n Test Error:",
+    100-(round((9+56)/length(test$Direction)*100,2)),"%")
+```
+
+### REFERENCES
+
+- Chapter 4,Classification,*An Introduction to Statistical Learning with Applications in R* by Gareth James.
+
+**Question 3: In this problem, you will develop a model to predict whether a given car gets high or low gas mileage based on the Auto data set.**
+
+```{r Code Chunk-10}
+# Reading College data from ISLR package
+auto <- ISLR::Auto
+#attaching the dataset to the R file
+#attach(auto)
+
+# Investigating the dimensions, column names and summary of dataset
+cat("\n Dimensions of dataset:",dim(auto))
+
+#colnames(auto)
+
+#head(auto)
+
+#To check if there are any missing variables
+cat("\n")
+
+cat("\n Number of missing values in dataset:",auto %>% is.na() %>% sum())
+
+cat("\n\n")
+
+# Summary of Auto data
+cat("\n Summary of Auto Data:\n")
+summary(auto)
+```
+
+**3.a:Create a binary variable, mpg01, that contains a 1 if mpg contains a value above its median, and a 0 if mpg contains a value below its median. You can compute the median using the median() function. Note you may find it helpful to use the data.frame() function to create a single data set containing both mpg01 and the other Auto variables.**
+
+```{r Code Chunk-11}
+#creating a new variable mpg01 in auto dataset based on median value
+auto$mpg01<-ifelse(auto$mpg>median(auto$mpg),1,0)
+# removing the original mpg variable and creating a new auto dataset
+auto1<-data.frame(auto[,-1])
+#Swaping the last column to first
+auto1<- auto1[c(9,1,2,3,4,5,6,7,8)]
+# column names to confirm that old mpg variable is delted
+#colnames(auto1)
+#dimension of the dataset
+#dim(auto1)
+#Summary of dataset
+cat("\n Summary of New Auto Data:\n")
+summary(auto1)
+```
+
+**3.b:Explore the data graphically in order to investigate the association between mpg01 and the other features. Which of the other features seem most likely to be useful in predicting mpg01? Scatterplots and boxplots may be useful tools to answer this question. Describe your findings.**
+
+```{r Code Chunk-12,fig.width=8, fig.height=7}
+# Correlation plot using ggpairs
+ggpairs(auto1[,-9],title="Correlation Plot of New Auto Data :ggplot")
+```
+```{r Code Chunk-13}
+boxplot(cylinders~mpg01,data=auto1,
+      ylab="Number of cylinders",
+      xlab="Miles per Gallon",
+      main="Correlation between Mile per Gallon & Cylinders",cex.main=0.8,cex.lab=0.7)
+boxplot(displacement~mpg01,data=auto1,
+      ylab="Engine displacement(cu.inches)",
+      xlab="Miles per Gallon",
+      main="Correlation between Mile per Gallon & Displacement",cex.main=0.8,cex.lab=0.7)
+boxplot(horsepower~mpg01,data=auto1,
+      ylab="Engine Horsepower",
+      xlab="Miles per Gallon",
+      main="Correlation between Mile per Gallon & Horsepower",cex.main=0.8,cex.lab=0.7)
+boxplot(weight~mpg01,data=auto1,
+      ylab="Vehicle weight(lbs.)",
+      xlab="Miles per Gallon",
+      main="Correlation between Mile per Gallon & Weight",cex.main=0.8,cex.lab=0.7)
+boxplot(acceleration~mpg01,data=auto1,
+      ylab="Time to Accelerate(0-60mph)",
+      xlab="Miles per Gallon",
+      main="Correlation between Mile per Gallon & Acceleration",cex.main=0.8,cex.lab=0.7)
+boxplot(year~mpg01,data=auto1,
+      ylab="Model Year",
+      xlab="Miles per Gallon",
+      main="Correlation between Mile per Gallon & Year",cex.main=0.8,cex.lab=0.7)
+```
+   
+   From the correlation plot and the box plot it is clear that there is a correlation between miles per gallon and number of cylinders(4 Cylinders have higher mpg compared  to 8 cylinder cars that have lower mpg),displacement(lower displacement-higher mpg and higher displacement-lower mpg),horsepower(lower horsepower-higher mpg and higher horsepower-lower mpg),weight(lower weight-higher mpg and higher weight-lower mpg).
+
+**3.c:Split the data into a training set and a test set.**
+
+  A 70:30 split was made for training and test data.
+
+```{r Code Chunk-14}
+#selecting size of the train set
+size<-floor(0.70*nrow(auto1))
+#setting seed to obtain same results each time
+set.seed(274)
+#Randomly sampling the rows of dataset of specified size and saving the row numbers in the vector
+train_sample<-sample(seq_len(nrow(auto1)),size=size)
+#saving all the training records into train sampleset
+train1<-auto1[train_sample,]
+#saving all the test records into test sampleset
+test1<-auto1[-train_sample,]
+#Response variable of test data
+mpg01.test<-test1$mpg01
+cat("\nSize of Training Data:",nrow(train1),"\n")
+cat("Size of Test Data:",nrow(test1),"\n")
+
+```
+**3.f:Perform logistic regression on the training data in order to predict mpg01 using the variables that seemed most associated with mpg01 in (b). What is the test error of the model obtained?**
+
+  A Logistic regression model is fit for training data using the variables cylinders,displacement,horsepower,weight as predictors and mpg01 variable as response variable.
+
+\begin{verbatim}
+reg.mod3<-glm(mpg01~cylinders+displacement+horsepower+weight,
+          data=train1, family=binomial)
+\end{verbatim}
+
+```{r Code Chunk-15}
+#Fitting Logistic regression model with Lag2
+reg.mod3<-glm(mpg01~cylinders+displacement+horsepower+weight,
+              data=train1, family=binomial)
+#Summary of the model
+summary(reg.mod3)
+```
+
+```{r Code Chunk-16}
+prob.mod3<- predict(reg.mod3,test1,type="response")
+
+#Creating a vector with of length of the response variable from test dataset
+pred.mod3<-rep(0,length(prob.mod3))
+
+#For all the probabilities greater than 0.5 the Down element is converted to UP 
+pred.mod3[prob.mod3>0.5]<-"1"
+
+#Confusion Matrix
+table(pred.mod3,mpg01.test)
+
+# Correct predictions
+
+cat("\n Accuracy of prediction:",
+    round((45+60)/length(mpg01.test)*100,2),"%")
+
+cat("\n Test Error of the model:",
+    100-(round((45+60)/length(mpg01.test)*100,2)),"%")
+```
+
+  Predictions were made on test data using logistic regression model.The confusion matrix indicate that there is an 88.98% accuracy in predictions and a test error of 11.02%.
+
+**Question 4. Write a reusable function in RMD that calculates the misclassification rate, sensitivity, and specificity, and return a table similar to `Table 4.7`. Call this function `misclass.fun.*`, replacing `*` with your initials. The arguments for this function are a threshold, predicted probabilities, and original binary response data. Test your function using the data and model from 4.7.10 b) with threshold values of `c(0.25, 0.5, 0.75)`.**
+
+**Definitions:**
+
+- *True Positive:*When a true value is positive and predicted positive, its a True Positive.
+- *True Negative:*When a true value is negative and predicted negative, its a True Negative.
+- *False Positive:*When a true value is negative and predicted positive its a False Positive.
+- *False Negative:*When a true value is positive and predicted negative its a False Negative.
+- *Misclassification Rate:*The rate of incorrectly identified predictions.
+- *Sensitivity:*It is proportion of samples that test Positive using the test in question that are genuinely positive. It is also called as True Positive Rate.It is given by ratio of True Positive values to True Positive and False Negative values.
+- *Specificity:* It is proportion of samples that test Negative using the test in question that are genuinely Negative. It is also called as True Negative Rate.It is given by ratio of True Negative values to True Negative and False Positive values.
+
+Below is the reusable Function created for Misclassification Rate,Specificity and Sensitivity
+
+```{r Code Chunk-17,echo = T}    
+misclass.fun.SP <- function(predicted,actual,threshold=0.5){
+  predictied.values<- ifelse(predicted >= threshold,1,0)
+  
+  TP <- sum(ifelse(actual == 1 & predictied.values == 1,1,0))
+  TN <- sum(ifelse(actual == 0 & predictied.values == 0,1,0))
+  FP <- sum(ifelse(actual == 0 & predictied.values == 1,1,0))
+  FN <- sum(ifelse(actual == 1 & predictied.values == 0,1,0))
+  
+  misclassfication.rate <- ((FP+FN)/(TP+TN+FP+FN))*100
+  sensitivity <- TP/(TP+FN)
+  specificity <- TN/(TN+FP)
+  
+  Info.Table<- c('Misclassification Rate'=misclassfication.rate,                  'Sensitivity'=sensitivity,
+                 'Specificity'=specificity)
+  return(Info.Table)
+}
+```
+
+  The test data is predicted at different thresholds for Weekly data(2.d)and the comparison of Misclassification rate(%),Specificity,Sensitivity ware presented in below table.
+  
+```{r Code Chunk-18}
+t<-rep(0,length(test$Direction))
+t[test$Direction=="Up"]<-1
+Thres_0.5<-misclass.fun.SP(prob.mod2,t,
+                threshold=0.5)
+#kable(Thres_0.5,digits=3,caption="Threshold=0.5",
+      #col.names=c('Values'))
+Thres_0.25<-misclass.fun.SP(prob.mod2,t,
+                threshold=0.25)
+#kable(Thres_0.25,digits=3,caption="Threshold=0.25",
+      #col.names=c('Values'))
+Thres_0.75<-misclass.fun.SP(prob.mod2,t,
+                threshold=0.75)
+#kable(Thres_0.75,digits=3,caption="Threshold=0.75",
+      #col.names=c('Values'))
+Thres_all<-data.frame(Thres_0.25,Thres_0.5,Thres_0.75)
+kable(Thres_all,digits=3,caption="Comparision at Different Thresholds ", col.names=c(0.25,0.5,0.75))
+```
+
+### REFERENCES
+
+- Blog post by Karen Steward PhD,*Sensitivity vs Specificity* April 16,2019.
+- Blog post by Stephanie Glen, Statistics How To,*Sensitivity vs Specificity and Predictive Value* .
