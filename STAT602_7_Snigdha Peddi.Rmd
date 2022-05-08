@@ -1,0 +1,538 @@
+---
+title: "Homework 7"
+author: "Snigdha Peddi in Collaboration with John Herbert"
+output: pdf_document
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=F,warning=F,echo=F,fig_height=10,fig_width=7,cache = F)
+```
+
+```{r libraries}
+#install.packages("ISLR")
+library(ISLR)
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("knitr")
+library(knitr)
+#install.packages("tidyr")
+library(tidyr)
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("GGally")
+library(GGally)
+#install.packages("MASS")
+library(MASS)
+#install.packages("purrr")
+library(purrr)
+#install.packages("mclust")
+library(mclust)
+#install.packages('class')
+library(class)
+#install.packages('blorr')
+library(blorr)
+#install.packages('caTools')
+library("caTools")
+#install.packages('caret')
+library("caret")
+```
+
+```{r Code Chunk-1}
+misclass.fun <- function(predicted,actual,threshold=0.5){
+  predictied.values<- ifelse(predicted >= threshold,1,0)
+  
+  TP <- sum(ifelse(actual == 1 & predictied.values == 1,1,0))
+  TN <- sum(ifelse(actual == 0 & predictied.values == 0,1,0))
+  FP <- sum(ifelse(actual == 0 & predictied.values == 1,1,0))
+  FN <- sum(ifelse(actual == 1 & predictied.values == 0,1,0))
+  
+  misclassfication.rate <- ((FP+FN)/(TP+TN+FP+FN))
+  sensitivity <- TP/(TP+FN)
+  specificity <- TN/(TN+FP)
+  
+  Info.Table<- c('Misclassification Rate'=misclassfication.rate,                  'Sensitivity'=sensitivity,
+                 'Specificity'=specificity)
+  return(misclassfication.rate )
+}
+```
+
+
+### Question 5.4.3 (on page 198)
+We now review k-fold cross-validation.
+
+*(a)* Explain how k-fold cross-validation is implemented.
+
+### Answer:
+
+  Unlike the LOOCV where n-1 observations are considered for the training and 1 observation used for testing each time, in K-fold cross validation the whole data set is partitioned into multiple data sets (k=5 or k=10 etc). If K=10,where data set is partitioned into 10 parts,one set of data is left out as validation set and remaining 9 data sets are used as training data, a MSE is calculated. Next time, a new set of data is left out as validation set and remaining 9 sets of data is used for training and a MSE is calculated. Similar process is followed until all 10 data sets act as validation data sets resulting in 10 different MSE. An average of this MSE is calculated and that gives the k-fold cross-validation accuracy.
+
+$$ Cross\ Validation\ Accuracy,\  CV(k)=K^-1 \sum_{k1}^{K} MSE_k$$
+*(b)* What are the advantages and disadvantages of k-fold cross-validation relative to:
+
+### Answer:
+
+*i.* The validation set approach?
+
+#### Advantages of k-fold CV:
+
+- Less Bias,Less Variance.
+- Performs well with few number of observations.
+- Complete data will be used for training and testing the models.
+
+#### Disadvantages of k-fold CV: 
+
+- validation set approach is easy to understand.
+- computationally expensive compared to validation set approach where the model is trained and tested only once. 
+
+*ii.* LOOCV?
+
+#### Advantages of k-fold CV:
+
+- Computationally inexpensive.
+- We can estimate the accuracy. 
+- More stable and less variable.
+
+#### Disadvantages of k-fold CV: 
+
+- More bias when K<n, compared to LOOCV.
+
+
+#### References
+
+- STAT 602, Resampling Methods,Lecture,*Chapter 5 Part 1* by Dr.Saunders.
+- STAT 602, Resampling Methods,Lecture,*Chapter 5 Part 2* by Dr.Saunders.
+
+### Question 5.4.5 (on page 198)
+
+In Chapter 4, we used logistic regression to predict the probability of default using income and balance on the Default data set. We will now estimate the test error of this logistic regression model using the validation set approach. Do not forget to set a random seed before beginning your analysis.
+
+```{r Code Chunk-2}
+default <- Default
+#head(default)
+#Dimensions of Default Dataset
+cat("Dimensions of Default Datatset:\n",dim(default))
+cat("\n\nSummary of Default Dataset:\n")
+summary(default)
+```
+
+**(a)** Fit a logistic regression model that uses income and balance to predict default.
+
+### Answer:
+
+  A Logistic regression model is fit using income and balance as predictors and default variables as response.
+ 
+\begin{verbatim}
+Logistic Regression Model:
+default.glm<-glm(default~income+balance,data=default,family="binomial")
+\end{verbatim}
+
+```{r Code Chunk-3}
+#Logistic regression of Default data with income and balance as predictors
+default.glm<-glm(default~income+balance,data=default,family="binomial")
+#Summary of the glm model
+summary(default.glm)
+```
+
+**(b)** Using the validation set approach, estimate the test error of this model. In order to do this, you must perform the following steps:
+
+### Answer:
+
+**i** Split the sample set into a training set and a validation set.
+
+  A 70:30 split is done on the default dataset.
+
+```{r Code Chunk-4}
+set.seed(16489)
+split<-sample.split(default$default,SplitRatio = 0.7)
+train70<-subset(default,split==TRUE)
+test70<-subset(default,split==FALSE)
+cat("Dimensions of Traing set(70:30 split):\n",dim(train70))
+cat("\nDimensions of Validation set(70:30 split):\n",dim(test70))
+```
+**ii.** Fit a multiple logistic regression model using only the training observations.
+
+  Using glm() function a multiple logistic regression model is fit on the training data.
+
+\begin{verbatim}
+Logistic Regression Model:
+default.glm.train70<-glm(default~income+balance,
+                     data=train70,family="binomial")
+\end{verbatim}
+
+```{r Code Chunk-5}
+default.glm.train70<-glm(default~income+balance,data=train70,family="binomial")
+summary(default.glm.train70)
+```
+
+**iii.** Obtain a prediction of default status for each individual in the validation set by computing the posterior probability of default for that individual, and classifying the individual to the default category if the posterior probability is greater than 0.5.
+
+### Answer:
+
+  Predictions were made for each individual in the test set and classified the predicted observation as default if the prediction is more than 0.5.
+
+```{r Code Chunk-6}
+default.pred_glm70 <- predict(default.glm.train70,test70)
+default.pred_glm1 <- ifelse(default.pred_glm70 >=0.5,"Yes","No")
+```
+
+**iv.** Compute the validation set error, which is the fraction of the observations in the validation set that are misclassified.
+
+### Answer:
+
+  Misclassification rate is calculated for the prediction made using validation set. with a 70:30 split, the misclassification rate observed is 2.77%.97.2% (accuracy) of the observations were correctly classified.
+
+```{r Code Chunk-7}
+test1<-test70
+test1$default <- ifelse(test1$default == "Yes",1,0)
+default.pred_glm.res70 <- misclass.fun(default.pred_glm70,test1$default)
+kable(data.frame(Misclassification=default.pred_glm.res70),digits=5,caption='*70/30 split*')
+```
+
+**(c)** Repeat the process in (b) three times, using three different splits of the observations into a training set and a validation set. Comment on the results obtained.
+
+### Answer:
+  
+    The default data is further analysed using 80:20, 65:35, 60:40 training and test splits.
+  
+```{r Code Chunk-8}
+set.seed(16489)
+split<-sample.split(default$default,SplitRatio = 0.8)
+train80<-subset(default,split==TRUE)
+test80<-subset(default,split==FALSE)
+cat("Dimensions of Traing set(80:20 split):\n",dim(train80))
+cat("\nDimensions of Validation set(80:20 split):\n",dim(test80))
+cat("\n")
+default.glm.train80<-glm(default~income+balance,data=train80,family="binomial")
+#summary(default.glm.train1)
+
+cat("\nLogistic Regression Model (80:20 split):\n\n")
+(summary(default.glm.train80))$call
+
+default.pred_glm80 <- predict(default.glm.train80,test80)
+default.pred_glm1 <- ifelse(default.pred_glm80>=0.5,"Yes","No")
+
+test1<-test80
+test1$default <- ifelse(test1$default == "Yes",1,0)
+
+default.pred_glm.res80 <- misclass.fun(default.pred_glm80,test1$default)
+kable(data.frame(Misclassification=default.pred_glm.res80),digits=5,caption='*80/20 split*')
+```
+```{r Code Chunk-9}
+set.seed(16489)
+split<-sample.split(default$default,SplitRatio = 0.65)
+train65<-subset(default,split==TRUE)
+test65<-subset(default,split==FALSE)
+cat("Dimensions of Traing set(65:35 split):\n",dim(train65))
+cat("\nDimensions of Validation set(65:35 split):\n",dim(test65))
+cat("\n")
+default.glm.train65<-glm(default~income+balance,data=train65,family="binomial")
+#summary(default.glm.train1)
+cat("\nLogistic Regression Model (65:35 split):\n\n")
+summary(default.glm.train65)$call
+
+default.pred_glm65 <- predict(default.glm.train65,test65)
+default.pred_glm3 <- ifelse(default.pred_glm65>=0.5,"Yes","No")
+
+test1<-test65
+test1$default <- ifelse(test1$default == "Yes",1,0)
+
+default.pred_glm.res65 <- misclass.fun(default.pred_glm65,test1$default)
+kable(data.frame(Misclassification=default.pred_glm.res65),digits=5,caption='*65/35 split*')
+```
+
+```{r Code Chunk-10}
+set.seed(16489)
+split<-sample.split(default$default,SplitRatio = 0.6)
+train60<-subset(default,split==TRUE)
+test60<-subset(default,split==FALSE)
+cat("Dimensions of Traing set(60:40 split):\n",dim(train60))
+cat("\nDimensions of Validation set(60:40 split):\n",dim(test60))
+cat("\n")
+default.glm.train60<-glm(default~income+balance,data=train60,family="binomial")
+#summary(default.glm.train1)
+cat("\nLogistic Regression Model (60:40 split):\n\n")
+summary(default.glm.train60)$call
+
+default.pred_glm60 <- predict(default.glm.train60,test60)
+default.pred_glm2 <- ifelse(default.pred_glm60>=0.5,"Yes","No")
+
+test1<-test60
+test1$default <- ifelse(test1$default == "Yes",1,0)
+
+default.pred_glm.res60 <- misclass.fun(default.pred_glm60,test1$default)
+kable(data.frame(Misclassification=default.pred_glm.res60),digits=5,caption='*60/40 split*')
+```
+
+  These splits resulted in misclassifiaction rates of 2.7%,2.69% and 2.7% respectively. The comparative error rate is presented in the table below.
+  
+```{r Code Chunk-11}
+default.summary <- cbind("*60:40 Split*"=default.pred_glm.res60,"*65:35 Split*"=default.pred_glm.res65,"*70:30 Split*"=default.pred_glm.res70,"*80:20 Split*"=default.pred_glm.res80)
+kable(default.summary,digits=4,caption='Comparitive Error rate for Default Data')
+```
+
+**(d)**Now consider a logistic regression model that predicts the probability of default using income, balance, and a dummy variable for student. Estimate the test error for this model using the validation set approach. Comment on whether or not including a dummy variable for student leads to a reduction in the test error rate.
+
+### Answer:
+
+  Logistic regression models were fit using all predictor variables.
+ 
+```{r Code Chunk-12}
+#65:35 split with all predictor variables
+set.seed(16489)
+split<-sample.split(default$default,SplitRatio = 0.65)
+train.new<-subset(default,split==TRUE)
+test.new<-subset(default,split==FALSE)
+cat("Dimensions of Traing set(65:35 split):\n",dim(train.new))
+cat("\nDimensions of Validation set(65:35 split):\n",dim(test.new))
+cat("\n")
+
+default.glm.train.new<-glm(default~.,data=train.new,family="binomial")
+cat("\nLogistic Regression Model (65:35 split):\n\n")
+(summary(default.glm.train.new))$call
+cat("\nCoefficients of the model with 65:35 split:\n\n")
+
+summary(default.glm.train.new)$coefficients
+
+default.pred_glm.new <- predict(default.glm.train.new,test.new)
+default.pred_glm5 <- ifelse(default.pred_glm.new>=0.5,"Yes","No")
+
+test1<-test.new
+test1$default <- ifelse(test1$default == "Yes",1,0)
+
+default.pred_glm.res.new <- misclass.fun(default.pred_glm.new,test1$default)
+kable(data.frame(Misclassification=default.pred_glm.res.new),digits=5,caption='*All Predictors:65:35 Split*')
+
+######
+#70:30 split with all predictor variables
+cat("\n\n")
+set.seed(16489)
+split<-sample.split(default$default,SplitRatio = 0.70)
+train.new1<-subset(default,split==TRUE)
+test.new1<-subset(default,split==FALSE)
+cat("Dimensions of Traing set(70:30 split):\n",dim(train.new1))
+cat("\nDimensions of Validation set(70:30 split):\n",dim(test.new1))
+cat("\n")
+
+default.glm.train.new1<-glm(default~.,data=train.new1,family="binomial")
+
+cat("\nLogistic Regression Model (70:30 split):\n\n")
+(summary(default.glm.train.new1))$call
+cat("\nCoefficients of the model with 70:30 split:\n\n")
+summary(default.glm.train.new1)$coefficients
+
+default.pred_glm.new1<- predict(default.glm.train.new1,test.new1)
+default.pred_glm51 <- ifelse(default.pred_glm.new1>=0.5,"Yes","No")
+
+test11<-test.new1
+test11$default <- ifelse(test11$default == "Yes",1,0)
+
+default.pred_glm.res.new1 <- misclass.fun(default.pred_glm.new1,test11$default)
+kable(data.frame(Misclassification=default.pred_glm.res.new1),digits=5,caption='*All Predictors:70:30 split*')
+
+######
+#60:40 split with all predictor variables
+cat("\n\n")
+set.seed(16489)
+split<-sample.split(default$default,SplitRatio = 0.60)
+train.new2<-subset(default,split==TRUE)
+test.new2<-subset(default,split==FALSE)
+cat("Dimensions of Traing set(60:40 split):\n",dim(train.new2))
+cat("\nDimensions of Validation set(60:40 split):\n",dim(test.new2))
+cat("\n")
+
+default.glm.train.new2<-glm(default~.,data=train.new2,family="binomial")
+
+cat("\nLogistic Regression Model (60:40 split):\n\n")
+(summary(default.glm.train.new2))$call
+cat("\nCoefficients of the model with 60:40 split:\n\n")
+summary(default.glm.train.new2)$coefficients
+
+default.pred_glm.new2<- predict(default.glm.train.new2,test.new2)
+default.pred_glm52 <- ifelse(default.pred_glm.new2>=0.5,"Yes","No")
+
+test12<-test.new2
+test12$default <- ifelse(test12$default == "Yes",1,0)
+
+default.pred_glm.res.new2 <- misclass.fun(default.pred_glm.new2,test12$default)
+kable(data.frame(Misclassification=default.pred_glm.res.new2),digits=5,caption='*All Predictors:60:40 split*')
+
+######
+#80:20 split with all predictor variables
+cat("\n\n")
+set.seed(16489)
+split<-sample.split(default$default,SplitRatio = 0.80)
+train.new3<-subset(default,split==TRUE)
+test.new3<-subset(default,split==FALSE)
+cat("Dimensions of Traing set(80:20 split):\n",dim(train.new3))
+cat("\nDimensions of Validation set(80:20 split):\n",dim(test.new3))
+cat("\n")
+
+default.glm.train.new3<-glm(default~.,data=train.new3,family="binomial")
+
+cat("\nLogistic Regression Model (80:20 split):\n\n")
+(summary(default.glm.train.new3))$call
+cat("\nCoefficients of the model with 80:20 split:\n\n")
+summary(default.glm.train.new3)$coefficients
+
+default.pred_glm.new3<- predict(default.glm.train.new3,test.new2)
+default.pred_glm53 <- ifelse(default.pred_glm.new3>=0.5,"Yes","No")
+
+test13<-test.new3
+test13$default <- ifelse(test13$default == "Yes",1,0)
+
+default.pred_glm.res.new3 <- misclass.fun(default.pred_glm.new3,test13$default)
+kable(data.frame(Misclassification=default.pred_glm.res.new3),digits=5,caption='*All Predictors:80:20 split*')
+```
+
+   The p value of income variable at 0.05% confidence interval is larger on addition of dummy variable "Student:Yes" to all the models (in all the different splits). Even the P value of the dummy variables is higher that 0.05 except for 70:30 split where it is marginal with 0.05.
+   Missclassification rate of all splits is presented in table below.the 80:20 split has highest error rate of 4.32% and 60:40 split has lowest,2.72%.
+   
+```{r}
+default.summary1 <- cbind("*60:40 Split*"=default.pred_glm.res.new2,"*65:35 Split*"=default.pred_glm.res.new,"*70:30 Split*"=default.pred_glm.res.new1,"*80:20 Split*"=default.pred_glm.res.new3)
+kable(default.summary1,digits=4,caption='Comparitive Error rate for: All Predictors')
+```
+
+   On comparison, the addition of the dummy variable student:yes to the models has an effect when the default data is split 80:20. In all other cases the error rates are pretty close (2.7%) and seems to have not much effect.
+
+
+### Question 5.4.7 (page 200)
+
+In Sections 5.3.2 and 5.3.3, we saw that the cv.glm() function can be used in order to compute the LOOCV test error estimate. Alternatively, one could compute those quantities using just the glm() and predict.glm() functions, and a for loop. You will now take this approach in order to compute the LOOCV error for a simple logistic regression model on the Weekly data set. Recall that in the context of classification problems, the LOOCV error is given in (5.4).
+
+```{r Code Chunk-13}
+weekly<-Weekly
+cat("Dimensions of Weekly Data Set:\n")
+dim(weekly)
+#head(weekly)
+weekly$Direction <- ifelse(weekly$Direction=='Up',1,0)
+#head(weekly)
+#summary(weekly)
+```
+
+**(a)** Fit a logistic regression model that predicts Direction using Lag1 and Lag2.
+
+### Answer:
+
+   A logistic regression model is fit for weekly data using Lag1 and Lag2 variables as predictors.
+   
+```{r Code Chunk-14}
+weekly.glm<-glm(Direction~Lag1+Lag2,data=weekly,family="binomial")
+cat("\nLogistic Regression model of weekly dataset:\n\n")
+summary(weekly.glm)$call
+```
+
+**(b)** Fit a logistic regression model that predicts Direction using Lag1 and Lag2 using all but the first observation.
+
+### Answer:
+
+  A logistic regression model is fit using Lag1 and Lag2 variables as predictors for observations of weekly data except the first variable.
+  
+```{r Code Chunk-15}
+weekly.glm_1<-glm(Direction~Lag1+Lag2,data=(weekly[-1,]),family="binomial")
+cat("\nLogistic Regression model of weekly dataset-first observation:\n\n")
+summary(weekly.glm_1)$call
+```
+**(c)** Use the model from (b) to predict the direction of the first observation. You can do this by predicting that the first observation will go up if P(Direction="Up"|Lag1, Lag2) > 0.5. Was this observation correctly classified?
+
+### Answer:
+
+  The predictions were made on the first observation using the logistic regression model fit above.The prediction made for first observation is missclassified as direction "Up" instead of "Down".
+  
+```{r Code Chunk-16}
+weekly.pred_1<-predict.glm(weekly.glm_1,(weekly[1,]),type="response")
+weekly.pred_1<-ifelse(weekly.pred_1>=0.5,1,0)
+ kable(cbind(Predicted=weekly.pred_1,Actual=(weekly[1,])$Direction),caption="Direction of 1st Observation")
+```
+
+**(d)** Write a for loop from i = 1 to i = n, where n is the number of observations in the data set, that performs each of the following steps:
+
+*i.* Fit a logistic regression model using all but the ith observation to predict Direction using Lag1 and Lag2.
+*ii.* Compute the posterior probability of the market moving up
+for the ith observation.
+*iii.* Use the posterior probability for the ith observation in order to predict whether or not the market moves up.
+*iv.* Determine whether or not an error was made in predicting
+the direction for the ith observation. If an error was made,
+then indicate this as a 1, and otherwise indicate it as a 0.
+*(e)* Take the average of the n numbers obtained in (d)iv in order to obtain the LOOCV estimate for the test error. Comment on the results.
+
+### Answer:
+
+  LOOCV is estimated by using *glm()* and *predict.glm()* functions using a *for loop* where each time one observation (nth) is used as test set and n-1 observations are used as training set. This process is continued until all the observations in the dataset are used as validation sets. The estimated error rate using LOOCV is 0.45.
+
+```{r Code Chunk-17}
+set.seed(16489) 
+n=length(weekly$Direction)
+vec<-rep(0,length(weekly$Direction))
+for (i in 1:n){
+weekly.glm_2<-glm(Direction~Lag1+Lag2,data=(weekly[-i,]),family="binomial")
+weekly.pred_2<-predict.glm(weekly.glm_2,(weekly[i,]),type='response')
+weekly.pred_2<-ifelse(weekly.pred_2>=0.5,1,0)
+vec[i]<-ifelse(weekly$Direction[i]==weekly.pred_2,0,1)
+Test.Error<-mean(vec)
+}
+
+cat("\n LOOCV estimate for error rate:\n",Test.Error)
+```
+#### References
+
+- Chapter 5,Resampling Methods,*An Introduction to Statistical Learning with Applications in R* by Gareth James.
+
+### Question 4:
+
+Write your own code (similar to Exercise \#3 above) to estimate test error using k-fold cross validation for fitting a linear regression model of the form
+
+$$ mpg = \beta_0 + \beta_1 * X_{1} + \beta_2 * X_{1}^2$$
+
+  from the **Auto** data in the **ISLR** library, with $X_{1} =$ horsepower. Use `echo = T` to show the code. Test this code with `k = 5` and `k = 30`. Discuss the computational trade-off between the two choices of `k`. Do not use the `cv.glm` function.
+  
+### Answer:
+ 
+  K-Fold cross validation error rate is estimated by using *glm()* and *predict.glm()* functions using a *for loop* where each time one fold of observations (for k=5, 1 set is used as test set) are used as test set and k-1 folds of observations are used as training set. This process is continued until all the folds are used as validation sets. The estimated error rate using k=5 is 19.1 and k=30 is 19.2.
+
+```{r Code Chunk-18,echo = T}
+#Reading Auto data 
+auto1<-Auto
+#Setting seed for reproducibility
+set.seed(16489)
+#Randomly shuffling the Auto data
+auto1<-auto1[sample(nrow(auto1)),]
+
+#Create 5 equally size folds
+folds<-cut(seq(1,nrow(auto1)),breaks=5,labels=FALSE)
+#No. of subsets,k=5
+k=5
+#Creating Empty Vector of length k
+V<-rep(0,length(k))
+#For loop to get K-fold cross validation error rate
+for(i in 1:5){
+  auto.mod<-lm(mpg~poly(horsepower,2),data=auto1[folds!=i,])
+  auto.pred<-predict.lm(auto.mod,auto1[folds==i,])
+V[i]<-mean((auto.pred-auto1$mpg[folds==i])^2)
+test.error<-mean(V)
+}
+cat("\nK=5,estimate for error rate:\n\n",test.error)
+
+####
+
+#Create 30 equally size folds
+folds<-cut(seq(1,nrow(auto1)),breaks=30,labels=FALSE)
+#No. of subsets,k=30
+k=30
+#Creating Empty Vector of length k
+V<-rep(0,length(k))
+#For loop to get K-fold cross validation error rate
+for(i in 1:30){
+  auto.mod<-lm(mpg~poly(horsepower,2),data=auto1[folds!=i,])
+  auto.pred<-predict.lm(auto.mod,auto1[folds==i,])
+V[i]<-mean((auto.pred-auto1$mpg[folds==i])^2)
+test.error<-mean(V)
+}
+cat("\nK=30,estimate for error rate:\n\n",test.error)
+```
+
+  K-fold cross validation error rate for both k=5 and k=30 is very close.However, k=30 will take more computational power than k=3 as the loop has to run 25 times more.
+
+### REFERENCES
+
+- StackExchange blog post on *How to split data set to do 10-fold cross validation*.
