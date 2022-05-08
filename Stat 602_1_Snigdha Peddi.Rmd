@@ -1,0 +1,500 @@
+---
+title: "Homework 1- STAT 602"
+author: "Snigdha Peddi"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=F,warning=F,echo=F,fig_height=10,fig_width=7,cache = F)
+```
+
+```{r libraries}
+
+# libraries used for Homework 1
+
+#install.packages("ISLR")
+library(ISLR)
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("GGally")
+library(GGally)
+#install.packages("knitr")
+library(knitr)
+#install.packages("purrr")
+library(purrr)
+#install.packages("tidyr")
+library(tidyr)
+```
+
+**Question 2.4.2. Explain whether each scenario is a classification or regression problem, and indicate whether we are most interested in inference or prediction. Finally, provide n and p.**
+
+
+**(a)** We collect a set of data on the top 500 firms in the US. For each firm we record profit, number of employees, industry and the CEO salary. We are interested in understanding which factors affect CEO salary.
+
+
+| **Answer 2.a:** Here we are dealing with a **Regression problem** as the dependent variable "CEO salary" is quantitative response variable. We are interested in **inference** as we are studying the relation between the independent variables and the CEO salary(dependent variable). Here, n=500 and p=3.
+
+
+**(b)** We are considering launching a new product and wish to know whether it will be a success or a failure. We collect data on 20 similar products that were previously launched. For each product we have recorded whether it was a success or failure, price charged for the product, marketing budget, competition price,and ten other variables.
+
+
+| **Answer 2.b:** Here the dependent variable is a qualitative response of Success or Failure, hence a **Classification Problem**. It is a **Prediction** problem as we would like to know if the new product launch will be a success or failure. Here, n=20 and p=13.
+
+
+
+**(c)** We are interested in predicting the % change in the USD/Euro exchange rate in relation to the weekly changes in the world stock markets. Hence we collect weekly data for all of 2012. For each week we record the % change in the USD/Euro, the % change in the US market, the % change in the British market, and the % change in the German market.
+
+
+| **Answer 2.c**: The dependent variable here is %change in the USD/Euro exchange rate and is a quantitative response variable. Hence it is a **Regression Problem**.It is a **prediction** problem.Here, n=52(52 weeks in year 2012) and p=3.
+
+
+
+
+
+**Question 2.4.4.  4. You will now think of some real-life applications for statistical learning.**
+
+**(a)** Describe three real-life applications in which classification might be useful. Describe the response, as well as the predictors. Is the goal of each application inference or prediction? Explain your answer.
+
+| **Example 1:** Classification is useful in diagnosis of a disease. By analyzing the clinical parameters one can provide a prognosis if the patient has a disease or not, or can provide information on if the disease is in early stages or advance state etc.
+
+*Response variable:* Disease present or Absent, Mild state/ Advance state etc.
+
+*Predictors:* Clinical parameters like urine analysis, blood work, number of hospital visits, number of inpatient admission, medication prescribed etc.
+
+*Goal:* Can be prediction (if we want to use the historical data to predict the new patient condition) or Inference ( if we would like to understand the factors effecting the presence or absence of a disease.)
+
+
+| **Example 2:** Classifying customers by banks before giving loans on their ability to pay the loans.
+
+*Response variable:* Default or Non-Default
+
+*Predictors:* Age, Income,monthly expense, education, salary/debt ratio etc.
+
+*Goal:* Prediction(To predict if the customer will default on a loan or not)
+
+
+
+| **Example 3:** Classifying an Email as Spam or Not Spam
+
+*Response variable:* Spam or Not Spam
+
+*Predictors:* most common words used in emails 
+
+*Goal:* Prediction( to predict if the email is spam or not)
+
+
+
+**(b)** Describe three real-life applications in which regression might be useful. Describe the response, as well as the predictors. Is the goal of each application inference or prediction? Explain your answer.
+
+
+| **Example 1:** Predicting revenue based on budget allocated on various marketing channels
+
+*Response variable:* Revenue
+
+*Predictors:* Budget allocated for each marketing channel like TV,Radio,Newspaper, social media etc
+
+*Goal:* Inference (How advertising spending effects the revenue is what we would like to understand here)
+
+
+| **Example 2:** Agricultural scientists use regression techniques to measure effect of fertilizer and water on crop yields
+
+*Response variable:* crop yields
+
+*Predictors:* different fertilizers, amount of fertilizer, amount of water, number of times crops are watered, number of times fertilizer is used,active ingredient of fertilizer, PH level of water, PH lever of fertilizer etc
+
+*Goal:* Inference (how the use of a particular fertilizer and water effect the crop yield)
+
+
+| **Example 3:** Effect of drug on blood pressure
+
+*Response variable:* Blood pressure
+
+*Predictors:* Drug name, dose of drug, time of administration, route of administration etc,.
+
+*Goal:* Inference(understand the relation between the amount of drug and blood pressure of the subject)
+
+
+
+**(c)** Describe three real-life applications in which cluster analysis might be useful.
+
+| **Example 1:** Cluster analysis is helpful in Identifying Fake news.The content of the news will be analyzed and words or corpus will be clustered. The words that are commonly used to sensationalize the news can be identified and predict if the news is fake or genuine.
+
+
+| **Example 2:** Clustering is also useful in market segmentation. Customer behavior and buying patterns can be clustered and each group of customers can be targeted with individual marketing strategy which would help increase the sales and build customer trust.
+
+
+| **Example 3:** It can be used to classify network traffic to the websites.Characteristics of Traffic sources are used to cluster them into groups of harmful traffic or areas driving growth.It is a faster process than auto-class method and help developer to grow the site and plan capacity effectively.
+
+
+
+### REFERENCES
+
+- Statology Blog by Zach,*4 Examples of Using Linear Regression in Real Life*,May 19,2020.
+- Datafloq Blog by Claire Whittaker,*7 Innovative Uses of Clustering Algorithms in the Real World*,April 4,2019.
+
+
+
+
+
+**Question 2.4.6. Describe the differences between a parametric and a non-parametric statistical learning approach. What are the advantages of a parametric approach to regression or classification (as opposed to a nonparametric approach)? What are its disadvantages?**
+
+**Answer:**
+
+| *Parametric methods* are used to make inferences about population parameters.These methods assume a form(model) for the data.It learns from a predefined mapped function.They have fixed number of parameters.The method works well if the assumptions are correct.If the data does not fit the assumed model when the assumptions are incorrect.They are not flexible models.
+
+| If the data assumes to fit a linear model of form 
+
+ \begin{equation}
+    \beta_0 + \beta_1 X_1 + \beta_2 X_2=Y
+  \end{equation}
+
+| All we need is to estimate the coefficients of the parameters to get Y value. The number of parameters remain same for any size of data. If the model assumed is right the predictions will be accurate. In case the model does not fit well the data can be transformed to its log form or squared to get better accuracy. 
+
+
+**Advantages:**They are simpler, easy to understand and interpretable.Computationally faster and requires less data.
+
+
+**Disadvantages:**Constrained and stick to their assumptions, limited complexity, can result into poor fit.
+
+
+Examples of Parametric methods include linear Regression,Logistic regression, Linear Discriminany analysis
+
+
+| *Non-parametric methods* do not assume a model. It learns from the training data.The number of parameters may increase as it learns from the data.These are flexible models.Compared to the parametric models these are not very interpretable.
+
+
+**Advantages:**Higher performance and very flexible.
+
+
+**Disadvantages:**Requires lot of data to learn and is slower. May lead to overfitting.
+
+
+Examples of Non parametric methods include KNN, Decision Tree model.
+
+
+
+### REFERENCES
+
+- Analytics Vidhya Blog ,*What is the difference between parametric and non-parametric regression?*.
+- Blog by Lamiae Hana,*Parametric and Nonparametric Machine Learning Algorithms*,Aug 9,2020.
+
+
+
+
+
+**Question 2.4.8.** This exercise relates to the College data set, which can be found in the file College.csv. It contains a number of variables for 777 different universities and colleges in the US. The variables are
+• Private : Public/private indicator
+• Apps : Number of applications received
+• Accept : Number of applicants accepted
+• Enroll : Number of new students enrolled
+• Top10perc : New students from top 10 % of high school class
+• Top25perc : New students from top 25 % of high school class
+• F.Undergrad : Number of full-time undergraduates
+• P.Undergrad : Number of part-time undergraduates
+• Outstate : Out-of-state tuition
+• Room.Board : Room and board costs
+• Books : Estimated book costs
+• Personal : Estimated personal spending
+• PhD : Percent of faculty with Ph.D.’s
+• Terminal : Percent of faculty with terminal degree
+• S.F.Ratio : Student/faculty ratio
+• perc.alumni : Percent of alumni who donate
+• Expend : Instructional expenditure per student
+• Grad.Rate : Graduation rate
+Before reading the data into R, it can be viewed in Excel or a text editor.
+
+
+**(a)**Use the read.csv() function to read the data into R. Call the loaded data college. Make sure that you have the directory set to the correct location for the data.
+
+```{r Code Chunk-1}
+# Reading College data from ISLR package
+college <- ISLR::College
+#attaching the dataset to the R file
+attach(college)
+
+# Investigating the dimensions, column names and summary of college dataset
+cat("\n Dimensions of dataset:",dim(college))
+
+#colnames(college)
+
+#head(college)
+
+#To check if there are any missing variables
+
+cat("\n Number of missing values in dataset:",college %>% is.na() %>% sum())
+
+cat("\n\n")
+
+
+```
+
+
+**(c)** i. Use the summary() function to produce a numerical summary of the variables in the data set.
+
+```{r Code Chunk-2}
+# Summary of Data set
+
+cat("\n Summary of College Data: \n\n")
+
+summary(college)
+cat("\n\n")
+
+```
+
+ii. Use the pairs() function to produce a scatterplot matrix of the first ten columns or variables of the data. Recall that you can reference the first ten columns of a matrix A using A[,1:10].
+
+
+```{r Code Chunk-3,fig.width=10, fig.height=10}
+# Pairs plot to produce scatter plot of first 10 columns
+
+pairs(college[,1:10],
+      main="Correlation Plot of College Data")
+
+```
+
+```{r Code Chunk-4,fig.width=10, fig.height=10}
+# Correlation plot using ggpairs
+ggpairs(college[,1:10],title="Correlation Plot of College Data :ggplot")
+```
+ 
+ From the plot it is clear that 94.3% of applications were accepted.91.2% of accepted students enrolled into one of the Universities.96.5% of students enrolled are Full time students.
+ 
+ 
+ 
+iii. Use the plot() function to produce side-by-side boxplots of Outstate versus Private.
+
+```{r Code Chunk-5}
+# Box Plot between Out of state Tuition and Public/Private indicator
+plot(Outstate~Private,data=college,
+      xlab=" Private University",
+      ylab="Out of State Tuition in $",
+      main="Comparision of Out of State Tuition and Private Universities")
+
+```
+ From the Plot it is clear that the median tuition of Private institutions is higher for the Out of state students than the Public Institutions.And over all fee for Out of state students is lower at Public institutions compared to private institutions.
+ 
+```{r Code Chunk-6}
+## Box plot using ggplot package
+college%>%
+  ggplot(aes(x=Private,y=Outstate)) +
+  geom_boxplot() +
+  scale_y_continuous(labels = scales::dollar) +
+  labs(title='Comparision of Out of State Tuition and Private Universities:ggplot',
+       x = 'Private University',
+       y='Out of State Tuition')
+```
+ 
+iv. Create a new qualitative variable, called Elite, by binning the Top10perc variable. We are going to divide universities into two groups based on whether or not the proportion of students coming from the top 10 % of their high school classes exceeds 50 %.
+
+
+```{r Code Chunk-7}
+# creating new variable called Elite with rows equal to rows in college dataset
+Elite<-rep("No",nrow(college ))
+# Assigning Yes to Elite variable for all top10perc students with >50%
+Elite[college$Top10perc >50]<-" Yes"
+# Coverting the variable to a factor
+ Elite<-as.factor(Elite)
+# Adding Elite variable to college data
+college<-data.frame(college , Elite)
+```
+
+Use the summary() function to see how many elite universities there are. Now use the plot() function to produce
+side-by-side boxplots of Outstate versus Elite.
+
+
+```{r Code CHunk-8}
+# Summary of newly added Elite Variable
+
+cat("\n Summary of Elite Variable: \n\n")
+
+(summary(college$Elite))
+
+```
+
+```{r Code Chunk-9}
+# Box plot of Elite universities vs out of state students
+plot(Outstate~Elite,data=college,
+      xlab=" Elite University",
+      ylab="Out of State Tuition in $",
+      main="Comparision of Out of State Tuition and Elite Universities")
+
+```
+
+The median tuition fee for Elite Universities is higher for Out of State students compared to the other Universities.75th percentile of the tuition paid to Non-Elite colleges is lower than the 25th percentile of tuition paid to Elite universities by Out of state students.
+
+
+```{r Code Chunk-10}
+## Box plot using ggplot package
+college%>%
+  ggplot(aes(x=Elite,y=Outstate)) +
+  geom_boxplot() +
+  scale_y_continuous(labels = scales::dollar) +
+  labs(title='Comparision of Out of State Tuition and Elite Universities:ggplot',
+       x = 'Elite University',
+       y='Out of State Tuition')
+```
+
+
+v. Use the hist() function to produce some histograms with differing numbers of bins for a few of the quantitative variables. You may find the command par(mfrow=c(2,2)) useful: it will divide the print window into four regions so that four plots can be made simultaneously. Modifying the arguments to this function will divide the screen in other ways.
+
+   Histogram function is applied to few quantitative variables like Graduation rate, Number of Applications accepted, Number of students enrolled and Room/board costs. Applying hist() function from Graphics package on the Graduation Rate show that the data is kind of negatively skewed with 2 clusters.Highest number of Universities have a graduation rate between 60 -70%. Changing the Bin size to 30 did not change my opinion on the graduation rate of highest number of Universities.Histogram of Number of applications accepted is positively skewed with single cluster. The maximum number of applications accepted was about 525.Changing bin size to 30 did not change my interpretation.Histogram of Number of students enrolled is positively skewed with 3 clusters. The maximum number of applications accepted was about 430.Changing the bin size changed the maximum number of students enrolled to about 230 without change in the number of clusters.Histogram of Room/board costs is positively skewed with 2 clusters.Changing bin size to 30 didnot change much of the histogram.
+  
+
+```{r Code Chunk-11, fig.height=11, fig.width=8}
+# set the plotting area into a 1*2 array
+par(mfrow=c(4,2))
+
+#plotting the basic histogram for Graduation Rate
+hist(college$Grad.Rate,cex.main=0.92,
+     xlab = 'Graduation Rate',
+     main = 'Graduation Rate:Bin Size 10',
+     ylab = 'Frequency')
+
+#plotting the basic histogram for Graduation Rate with a bin size 30
+hist(college$Grad.Rate,breaks=30,cex.main=0.92,
+     xlab = 'Graduation Rate',
+     main = 'Graduation Rate:Bin Size 30',
+     ylab = 'Frequency')
+
+#plotting the basic histogram for Applications Accepted
+hist(college$Accept,cex.main=0.92,
+     xlab = 'Number of applications accepted',
+     main = 'Applications Accepted:Bin Size 10',
+     ylab = 'Frequency')
+
+#plotting the basic histogram for Applications Accepted, bin size=30
+hist(college$Accept,breaks=30,cex.main=0.92,
+     xlab = 'Number of applications accepted',
+     main = 'Applications Accepted:Bin Size 30',
+     ylab = 'Frequency')
+
+#plotting the basic histogram for Number of Students Enrolled
+hist(college$Enroll,cex.main=0.92,
+     xlab = 'Number of Students Enrolled',
+     main = 'Number of students Enrolled:Bin Size 10',
+     ylab = 'Frequency')
+
+#plotting the basic histogram for Number of Students Enrolled,bin size=30
+hist(college$Enroll,breaks=30,cex.main=0.92,
+     xlab = 'Number of Students Enrolled',
+     main = 'Number of students Enrolled:Bin Size 30',
+     ylab = 'Frequency')
+
+#plotting the basic histogram for Room and board costs
+hist(college$Room.Board,cex.main=0.92,
+     xlab = 'Room & Board Costs',
+     main = 'Room & Board Costs:Bin Size 10',
+     ylab = 'Frequency')
+
+#plotting the basic histogram for Room and board costs
+hist(college$Room.Board,breaks=30,cex.main=0.92,
+     xlab = 'Room & Board Costs',
+     main = 'Room & Board Costs:Bin Size 30',
+     ylab = 'Frequency')
+
+```
+
+ Similarly, Histograms of all the numerical variables are plotted with a bin size of 10 and 30 using ggplot.
+ 
+ 
+```{r Code Chunk 12,fig.width=10,fig.height=10}
+# Histogram of Numeric variables using ggplot: default bin size 30 
+college %>%
+  keep(is.numeric) %>% 
+  gather() %>% 
+  ggplot(aes(value)) +
+    facet_wrap(~ key, scales = "free") +
+    geom_histogram()+labs(title='Histogram of Numeric variables using ggplot: Bin size 30')
+
+# Histogram of Numeric variables using ggplot: default bin size 10 
+college %>%
+  keep(is.numeric) %>% 
+  gather() %>% 
+  ggplot(aes(value)) +
+    facet_wrap(~ key, scales = "free") +
+    geom_histogram(bins=10)+labs(title='Histogram of Numeric variables using ggplot: Bin size 10')
+```
+
+
+### Reference
+
+- Blog BLOGR on *Quick plot of all variables*,July 13,2016
+
+
+
+vi. Continue exploring the data, and provide a brief summary of what you discover.
+
+  I have compared Graduation Rate, Room and board costs,Book costs,Personal costs and Instructional expenditure per student between students enrolled into Private Universities vs Public Universities and Elite Universities and Non-Elite Universities.
+ 
+ **Observations:**
+ 
+ - Median Graduation rate of students enrolled in Elite and Private Universities is higher compared to students enrolled in Public and Non-Elite universities.
+ 
+ - Median Room & Board costs for students enrolled in Elite and Private Universities is higher compared to students enrolled in Public and Non-Elite universities.The 75th percentile costs incurred of students enrolled in  Public and Non-Elite universities is close to the median value of costs incurred by students in Elite and Private Universities.
+ 
+ - Median Value of Book Costs for students enrolled in Elite and Public Universities is higher compared to students enrolled in Private and Non-Elite universities.However the costs incurred are are very close in both the cases.
+ 
+ - Median value of Personal Costs of students enrolled in Elite and Private Universities is lower compared to students enrolled in Public and Non-Elite universities.
+ 
+ - Median value of Instructional Expenditure per student of students enrolled in Elite and Private Universities is higher compared to students enrolled in Public and Non-Elite universities.
+ 
+
+```{r Code Chunk-13}
+par(mfrow=c(1,2))
+# Box plot of Elite universities vs Graduation rate
+plot(Grad.Rate~Elite,data=college,cex.main=0.9,
+      xlab=" Elite University",
+      ylab="Graduation Rate",
+      main="Graduation Rate vs Elite University")
+# Box plot of Private universities vs Graduation rate
+plot(Grad.Rate~Private,data=college,cex.main=0.9,
+      xlab=" Private University",
+      ylab="Graduation Rate",
+      main="Graduation Rate vs Private University")
+
+# Box plot of Elite universities vs Room.Board
+plot(Room.Board~Elite,data=college,cex.main=0.9,
+      xlab=" Elite University",
+      ylab="Room & Board Costs",
+      main="Room & Board Costs vs Elite University")
+# Box plot of Private universities vs Room.Board
+plot(Room.Board~Private,data=college,cex.main=0.9,
+      xlab=" Private University",
+      ylab="Room & Board Costs",
+      main="Room & Board Costs vs Private University")
+# Box plot of Elite universities vs Estimated Books Costs
+plot(Books~Elite,data=college,cex.main=0.9,
+      xlab=" Elite University",
+      ylab="Book Costs",
+      main="Book Costs vs Elite University")
+# Box plot of Private universities vs Estimated Books Costs
+plot(Books~Private,data=college,cex.main=0.9,
+      xlab=" Private University",
+      ylab="Book Costs",
+      main="Book Costs vs Private University")
+# Box plot of Elite universities vs Personal Costs
+plot(Personal~Elite,data=college,cex.main=0.9,
+      xlab=" Elite University",
+      ylab="Personal Costs",
+      main="Personal Costs vs Elite University")
+# Box plot of Private universities vs Personal Costs
+plot(Personal~Private,data=college,cex.main=0.9,
+      xlab=" Private University",
+      ylab="Personal Costs",
+      main="Personal Costs vs Private University")
+# Box plot of Elite universities vs Instructional Expenditure per student
+plot(Expend~Elite,data=college,cex.main=0.7,
+      xlab=" Elite University",
+      ylab="Instructional Expenditure per student",
+      main="Instructional Expenditure vs Elite University")
+# Box plot of Private universities vs Instructional Expenditure per student
+plot(Expend~Private,data=college,cex.main=0.7,
+      xlab=" Private University",
+      ylab="Instructional Expenditure per student",
+      main="Instructional Expenditure vs Private University")
+```
+
+
